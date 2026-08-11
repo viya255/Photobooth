@@ -24,6 +24,19 @@
     font-family:'Quicksand', sans-serif; color:var(--plum);
     display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
   }
+  
+  /* Sembunyikan elemen utama jika HP sedang dalam mode Kamera / Mode Terima Foto */
+  body.minimal-mode .top-nav,
+  body.minimal-mode .brand,
+  body.minimal-mode .history-scatter,
+  body.minimal-mode .history-fab {
+    display: none !important;
+  }
+  body.minimal-mode {
+    padding-top: 40px;
+    justify-content: center;
+  }
+
   h1,h2,h3{font-family:'Fraunces', serif; font-weight:600; margin:0;}
   .brand{display:flex; align-items:center; gap:10px; margin-bottom:28px; cursor:pointer;}
   .brand .mark{font-size:26px;}
@@ -110,7 +123,7 @@
   .status-msg{font-size:13px; color:var(--plum-soft); margin-top:10px; min-height:16px; text-align:center;}
   .status-msg.error{color:var(--danger); font-weight:700;}
 
-  /* ---- Riwayat: tersebar abstrak di area kosong kiri & kanan layar (bisa digeser bebas) ---- */
+  /* ---- Riwayat ---- */
   .history-scatter{position:fixed; top:96px; bottom:96px; width:210px; pointer-events:none; z-index:15;}
   .history-scatter.left{left:0;}
   .history-scatter.right{right:0;}
@@ -141,7 +154,6 @@
     .history-fab{display:flex;}
   }
 
-  /* ---- Riwayat Foto: layar daftar lengkap dengan nama / tanggal / jam ---- */
   .history-list-full{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:12px;}
   .history-row{display:flex; align-items:center; gap:14px; background:var(--cream); border-radius:16px; padding:10px 12px; border:1px solid rgba(233,166,188,.3);}
   .history-row img{width:52px; border-radius:10px; box-shadow:0 3px 8px rgba(0,0,0,.12); flex-shrink:0;}
@@ -192,7 +204,7 @@
       </div>
       <div class="start-option" id="optPhone">
         <span class="ic">📱</span>
-        <div class="txt"><b>Kamera HP (live, scan QR)</b><span>HP kamu jadi kamera photobooth</span></div>
+        <div class="txt"><b>Kamera HP (live, scan QR)</b><span>HP lain jadi kamera photobooth</span></div>
       </div>
     </div>
     <div class="btn-row"><button class="btn btn-primary" id="startBtn">Mulai Foto →</button></div>
@@ -211,18 +223,16 @@
   <details class="help" id="helpBuiltin">
     <summary>Kamera perangkat tidak muncul / diblokir?</summary>
     <ol>
-      <li>Saat pertama kali dibuka, browser akan menampilkan pop-up minta izin kamera — tekan <b>Allow / Izinkan</b>.</li>
-      <li>Kalau sudah terlanjur ditolak: klik ikon 🔒 / ⓘ di sebelah kiri alamat website (di address bar), cari pengaturan <b>Camera</b>, ubah ke <b>Allow</b>, lalu muat ulang halaman.</li>
-      <li>Pastikan tidak ada aplikasi lain yang sedang memakai kamera yang sama.</li>
+      <li>Saat pertama kali dibuka, browser akan menampilkan pop-up izin kamera — tekan <b>Allow / Izinkan</b>.</li>
+      <li>Jika ditolak: klik ikon 🔒 / ⓘ di sebelah kiri address bar browser, lalu izinkan akses Kamera.</li>
     </ol>
   </details>
   <details class="help" id="helpPhone" style="display:none;">
-    <summary>Cara pakai kamera HP</summary>
+    <summary>Cara pakai kamera HP lain</summary>
     <ol>
-      <li>Tekan tombol "Kamera HP (Live)" di atas — QR akan muncul di layar ini.</li>
-      <li>Buka kamera bawaan di HP, scan QR itu, lalu ketuk link yang muncul untuk membukanya di browser HP.</li>
-      <li>Di HP akan muncul tombol "Izinkan Kamera & Mulai" — tekan itu, lalu izinkan akses kamera saat diminta browser HP.</li>
-      <li>Begitu tersambung, gambar dari kamera HP otomatis muncul di layar ini. HP tidak perlu WiFi yang sama, cukup sama-sama tersambung internet.</li>
+      <li>Tekan "Kamera HP (Live)" — Kode QR khusus akan muncul di layar iPad/Laptop ini.</li>
+      <li>Buka kamera bawaan di HP yang dijadikan kamera, scan QR tersebut, lalu buka link webnya.</li>
+      <li>Tekan "Izinkan Kamera & Mulai" di HP. Gambar kamera HP akan otomatis tampil *live* di layar iPad/Laptop ini.</li>
     </ol>
   </details>
 
@@ -240,13 +250,13 @@
   <div class="shots-row" id="shotsRow"></div>
 </div>
 
-<!-- BE THE CAMERA (opened on the phone via QR) -->
+<!-- BE THE CAMERA (TAMPILAN KHUSUS DI HP KAMERA) -->
 <div class="screen" id="screen-be-camera">
   <div class="card" style="text-align:center;">
-    <h2>Kamu jadi kamera 📷</h2>
-    <p class="lead">HP ini akan mengirim gambar kamera secara langsung ke layar photobooth. Tekan tombol di bawah untuk mulai.</p>
-    <video id="selfPreview" autoplay playsinline muted style="width:100%; max-width:320px; border-radius:16px; background:#2b2130; aspect-ratio:4/3; object-fit:cover;"></video>
-    <div class="btn-row"><button class="btn btn-primary" id="beCameraStartBtn">🎥 Izinkan Kamera &amp; Mulai</button></div>
+    <h2>📷 Kamera Photobooth</h2>
+    <p class="lead">HP ini terhubung sebagai kamera. Semua pengaturan & tombol jepret ada di layar iPad/Laptop.</p>
+    <video id="selfPreview" autoplay playsinline muted style="width:100%; max-width:320px; border-radius:16px; background:#2b2130; aspect-ratio:4/3; object-fit:cover; margin: 12px 0;"></video>
+    <div class="btn-row"><button class="btn btn-primary" id="beCameraStartBtn">🎥 Aktifkan Kamera HP</button></div>
     <p class="status-msg" id="beCameraStatus"></p>
   </div>
 </div>
@@ -256,7 +266,7 @@
   <div class="stepper"><div class="dot done">📷</div><div class="dot now">🖼️</div><div class="dot">✓</div></div>
   <div class="card">
     <h2>Pilih frame favoritmu</h2>
-    <p class="lead">Sentuh salah satu frame untuk memakainya. Geser (drag) foto di photostrip untuk mengatur urutannya. Mau nambah frame baru? Atur di menu "🖼️ Kelola Frame" di halaman depan.</p>
+    <p class="lead">Pilih frame dan sesuaikan urutan foto jika diinginkan.</p>
     <div class="frame-gallery" id="frameGallery"></div>
 
     <div class="strip-editor">
@@ -265,7 +275,6 @@
         <h3 style="font-size:16px;">Tips mengedit</h3>
         <ul>
           <li>Tahan &amp; geser foto untuk tukar posisi</li>
-          <li>Frame favorit akan tersimpan otomatis untuk sesi berikutnya</li>
         </ul>
       </div>
     </div>
@@ -276,11 +285,11 @@
   </div>
 </div>
 
-<!-- MANAGE FRAMES (halaman depan) -->
+<!-- MANAGE FRAMES -->
 <div class="screen" id="screen-manage-frames">
   <div class="card">
     <h2 style="margin-bottom:6px;">Kelola Frame</h2>
-    <p class="lead">Tambah atau hapus frame di sini sebelum sesi foto dimulai. Frame yang tersimpan akan muncul sebagai pilihan saat tamu memilih frame nanti.</p>
+    <p class="lead">Tambah atau hapus frame pilihan kamu.</p>
     <div class="frame-gallery" id="manageFrameGallery"></div>
     <input type="file" id="frameUpload" accept="image/png,image/jpeg" style="display:none;">
     <div class="frame-size-note" id="frameSizeNote"></div>
@@ -288,11 +297,11 @@
   </div>
 </div>
 
-<!-- RIWAYAT (daftar lengkap) -->
+<!-- RIWAYAT -->
 <div class="screen" id="screen-history">
   <div class="card">
     <h2 style="margin-bottom:6px;">Riwayat Foto</h2>
-    <p class="lead">Semua hasil foto yang tersimpan di perangkat ini, lengkap dengan tanggal &amp; jam pengambilan.</p>
+    <p class="lead">Daftar foto yang tersimpan di perangkat ini.</p>
     <div class="history-list-full" id="historyListFull"></div>
     <div class="btn-row"><button class="btn btn-ghost" id="backFromHistoryBtn">← Kembali ke Beranda</button></div>
   </div>
@@ -329,7 +338,7 @@
 <div class="screen" id="screen-retrieve">
   <div class="card" style="text-align:center;">
     <h2>Masukkan kode manual</h2>
-    <p class="lead">Halaman ini <b>bukan</b> tempat QR-nya muncul — QR untuk mengambil foto muncul di layar <b>photobooth</b>, setelah sesi foto selesai dan tombol "Kirim ke HP" ditekan di sana. Kalau QR di layar photobooth susah discan, minta kode manual yang tertulis di bawah QR tersebut, lalu tempel di sini.</p>
+    <p class="lead">Masukkan kode manual jika QR Code pengiriman foto tidak dapat di-scan secara langsung.</p>
     <div class="retrieve-form">
       <input type="text" id="retrieveCodeInput" placeholder="tempel kode sambungan di sini">
       <button class="btn btn-primary" id="retrieveGoBtn">Ambil</button>
@@ -342,12 +351,12 @@
   </div>
 </div>
 
-<!-- RECEIVE VIA QR SCAN -->
+<!-- RECEIVE VIA QR SCAN (TAMPILAN KHUSUS PURE FOTO DI HP PELANGGAN) -->
 <div class="screen" id="screen-receive">
   <div class="card" style="text-align:center;">
-    <h2>Mengambil fotomu… ✿</h2>
+    <h2>✿ Unduh Fotomu ✿</h2>
     <p class="lead" id="receiveStatus">Menyambungkan ke photobooth…</p>
-    <div id="receiveResult"></div>
+    <div id="receiveResult" style="margin-top:15px;"></div>
   </div>
 </div>
 
@@ -365,8 +374,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script>
-/* ===================== LAYOUT (dipakai final canvas & template frame) ===================== */
+/* ===================== LAYOUT ===================== */
 const LAYOUT = (()=>{
   const W=900, PAD=50, GAP=32, photoW=800, photoH=675, footerH=158;
   const H = PAD + (photoH+GAP)*4 + footerH;
@@ -377,9 +387,28 @@ const LAYOUT = (()=>{
 const HISTORY_KEY = 'petalBoothHistory';
 const HISTORY_MAX = 20;
 
-/* ===================== QR HELPER (pakai layanan gambar, tanpa library eksternal) ===================== */
+/* ===================== MODE MINIMAL (SEMBUNYIKAN UI LAIN SAAT DI HP) ===================== */
+function setMinimalMode(enable){
+  if(enable){
+    document.body.classList.add('minimal-mode');
+  } else {
+    document.body.classList.remove('minimal-mode');
+  }
+}
+
+/* ===================== QR HELPER ===================== */
 function qrImageUrl(data, size){
-  return 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(data);
+  try {
+    if (typeof qrcode === 'function') {
+      var qr = qrcode(0, 'M');
+      qr.addData(data);
+      qr.make();
+      return qr.createDataURL(6, 12);
+    }
+  } catch(e) {
+    console.warn('Local QRCode fallback:', e);
+  }
+  return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
 /* ===================== STATE ===================== */
@@ -393,8 +422,8 @@ const state = {
     {id:'f4', name:'Kilau Emas', color:'#FFF3DC', accent:'#D9B26E', emoji:'✨', builtin:true},
   ],
   selectedFrame:null, pendingShot:null, sortable:null,
-  hostPeer:null, hostPeerId:null,   // untuk "Kirim ke HP"
-  camPeer:null, camCall:null,       // untuk "Kamera HP (Live)" di sisi booth
+  hostPeer:null, hostPeerId:null,
+  camPeer:null, camCall:null,
   finalReady:false,
   history:[],
 };
@@ -409,9 +438,9 @@ function fullCleanup(){
   if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
   if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
 }
-document.getElementById('homeBtn').onclick = ()=>{ fullCleanup(); showScreen('screen-start'); };
-document.getElementById('brandClick').onclick = ()=>{ fullCleanup(); showScreen('screen-start'); };
-document.getElementById('retrieveNavBtn').onclick = ()=>{ fullCleanup(); showScreen('screen-retrieve'); };
+document.getElementById('homeBtn').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
+document.getElementById('brandClick').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
+document.getElementById('retrieveNavBtn').onclick = ()=>{ showScreen('screen-retrieve'); };
 
 /* ===================== START SCREEN ===================== */
 let chosenSource='builtin';
@@ -432,7 +461,6 @@ const videoEl = document.getElementById('video');
 document.getElementById('srcBuiltinBtn').onclick=()=>switchSource('builtin');
 document.getElementById('srcPhoneBtn').onclick=()=>switchSource('phone');
 
-/* --- Cermin (mirror) toggle --- */
 function updateMirrorUI(){
   const btn=document.getElementById('mirrorToggleBtn');
   btn.textContent = state.mirror ? '🪞 Cermin: Aktif' : '🪞 Cermin: Mati';
@@ -480,14 +508,14 @@ async function startBuiltinCamera(){
     document.getElementById('shutterBtn').disabled=false;
     updateMirrorUI();
   }catch(err){
-    setCamStatus('Tidak bisa mengakses kamera ('+err.name+'). Buka bantuan "Kamera tidak muncul?" di atas untuk cara mengizinkannya.', true);
+    setCamStatus('Tidak bisa mengakses kamera ('+err.name+'). Buka bantuan "Kamera tidak muncul?" di atas.', true);
   }
 }
 function stopCamera(){
   if(state.stream){ state.stream.getTracks().forEach(t=>t.stop()); state.stream=null; }
 }
 
-/* --- Kamera HP (Live) via WebRTC + QR --- */
+/* --- Kamera HP (Live) via WebRTC --- */
 function startPhoneCameraPairing(){
   document.getElementById('phoneQrArea').style.display='block';
   const pairStatus=document.getElementById('camPairStatus');
@@ -512,14 +540,11 @@ function startPhoneCameraPairing(){
 
   peer.on('open', (id)=>{
     opened=true; clearTimeout(timeoutId);
-    const url = location.origin + location.pathname + '?camera=' + id;
+    const baseUrl = location.protocol.startsWith('file') ? 'https://petal-booth.vercel.app' : (location.origin + location.pathname);
+    const url = baseUrl + '?camera=' + id;
     const camQrImg = document.getElementById('camQrImg');
-    camQrImg.onerror = ()=>{
-      pairStatus.textContent = 'Gambar QR gagal dimuat. Coba muat ulang atau pindah jaringan.';
-      pairStatus.classList.add('error');
-    };
     camQrImg.src = qrImageUrl(url, 180);
-    pairStatus.textContent = 'Scan QR ini pakai kamera HP kamu untuk menyambungkan.';
+    pairStatus.textContent = 'Scan QR ini pakai kamera HP yang ingin dijadikan kamera.';
   });
   peer.on('call', (call)=>{
     call.answer();
@@ -637,9 +662,7 @@ function buildManageFrameGallery(){
   gal.appendChild(uploadTile);
 
   document.getElementById('frameSizeNote').innerHTML =
-    `Ukuran frame custom: <b>${LAYOUT.W} × ${LAYOUT.H}px</b>, PNG transparan. `+
-    `4 kotak foto masing-masing <b>${LAYOUT.photoW} × ${LAYOUT.photoH}px</b>, dimulai dari sisi kiri ${LAYOUT.PAD}px, `+
-    `posisi atas tiap kotak: ${LAYOUT.positions.join('px, ')}px. Bagian bawah ${LAYOUT.footerH}px dibiarkan kosong untuk teks tanggal.`;
+    `Ukuran frame custom: <b>${LAYOUT.W} × ${LAYOUT.H}px</b>, PNG transparan.`;
 }
 document.getElementById('frameUpload').onchange=(e)=>{
   const file=e.target.files[0]; if(!file) return;
@@ -778,11 +801,11 @@ document.getElementById('newSessionBtn').onclick=()=>{
   showScreen('screen-start');
 };
 
-/* ===================== KIRIM KE HP ===================== */
+/* ===================== KIRIM FOTO KE HP PELANGGAN ===================== */
 function showSendReady(){
   document.getElementById('qrWrap').style.display='inline-block';
   document.getElementById('codeBoxText').innerHTML =
-    'Scan QR ini pakai <b>kamera HP</b> kamu.<br>Pastikan HP &amp; perangkat ini sama-sama terhubung internet.<br>'+
+    'Scan QR ini pakai <b>kamera HP pelanggan</b>.<br>Foto akan otomatis dikirim dan bisa diunduh langsung.<br>'+
     '<span style="font-size:11px; word-break:break-all;">Kode manual: '+state.hostPeerId+'</span>';
   document.getElementById('sendPhoneBtn').disabled=false;
   document.getElementById('sendRetryRow').style.display='none';
@@ -805,16 +828,9 @@ function initHostPeer(){
   peer.on('open',(id)=>{
     opened=true; clearTimeout(timeoutId);
     state.hostPeerId=id;
-    const receiveUrl=location.origin+location.pathname+'?receive='+id;
+    const baseUrl = location.protocol.startsWith('file') ? 'https://petal-booth.vercel.app' : (location.origin + location.pathname);
+    const receiveUrl=baseUrl+'?receive='+id;
     const qrImgEl=document.getElementById('qrImg');
-    qrImgEl.onerror=()=>{
-      if(document.getElementById('codeBox').style.display==='block'){
-        document.getElementById('codeBoxText').innerHTML =
-          'QR gagal dimuat, pakai kode manual ini di HP:<br>'+
-          '<span style="font-size:11px; word-break:break-all;">'+state.hostPeerId+'</span>';
-        document.getElementById('sendPhoneBtn').disabled=false;
-      }
-    };
     qrImgEl.src = qrImageUrl(receiveUrl, 180);
     if(document.getElementById('codeBox').style.display==='block'){ showSendReady(); }
   });
@@ -822,7 +838,7 @@ function initHostPeer(){
     conn.on('open',()=>{
       const dataUrl=safeDataUrl();
       if(dataUrl) conn.send(dataUrl);
-      document.getElementById('codeBoxText').textContent='Tersambung! Foto sedang dikirim ke HP…';
+      document.getElementById('codeBoxText').textContent='Tersambung! Foto sedang dikirim ke HP pelanggan…';
       setTimeout(()=>{ document.getElementById('codeBoxText').textContent='Terkirim! Cek HP kamu untuk simpan foto ✿'; },800);
     });
   });
@@ -855,7 +871,7 @@ document.getElementById('sendRetryBtn').onclick=()=>{
   sendToPhone();
 };
 
-/* ===================== TERIMA FOTO DI HP ===================== */
+/* ===================== TERIMA FOTO DI HP PELANGGAN ===================== */
 function connectToHost(hostId, statusElId, resultElId){
   const statusEl=document.getElementById(statusElId), resultEl=document.getElementById(resultElId);
   statusEl.textContent='Menyambungkan ke photobooth…'; statusEl.classList.remove('error');
@@ -864,12 +880,12 @@ function connectToHost(hostId, statusElId, resultElId){
     const conn=peer.connect(hostId,{reliable:true});
     conn.on('open',()=>{ statusEl.textContent='Tersambung! Menunggu foto…'; });
     conn.on('data',(data)=>{
-      statusEl.textContent='Foto diterima! ✿'; resultEl.innerHTML='';
+      statusEl.textContent='Foto berhasil diterima! ✿'; resultEl.innerHTML='';
       const img=document.createElement('img');
-      img.src=data; img.style.cssText='max-width:240px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;';
+      img.src=data; img.style.cssText='max-width:260px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;';
       const dl=document.createElement('a');
       dl.href=data; dl.download='petal-booth.jpg'; dl.className='btn btn-primary';
-      dl.textContent='⬇ Simpan ke HP'; dl.style.cssText='display:inline-block; margin-top:14px; text-decoration:none;';
+      dl.textContent='⬇ Simpan / Unduh Foto'; dl.style.cssText='display:inline-block; margin-top:14px; text-decoration:none;';
       resultEl.appendChild(img); resultEl.appendChild(document.createElement('br')); resultEl.appendChild(dl);
     });
     conn.on('error',(err)=>{ statusEl.textContent='Gagal tersambung: '+err; statusEl.classList.add('error'); });
@@ -896,6 +912,7 @@ document.getElementById('backToFinalBtn').onclick = () => {
 
 /* ===================== JADI KAMERA HP ===================== */
 function setupBeCamera(hostId){
+  setMinimalMode(true);
   showScreen('screen-be-camera');
   const statusEl=document.getElementById('beCameraStatus');
   document.getElementById('beCameraStartBtn').onclick=async ()=>{
@@ -910,7 +927,7 @@ function setupBeCamera(hostId){
         const call=peer.call(hostId, stream);
         call.on('stream',()=>{});
         call.on('close',()=>{ statusEl.textContent='Koneksi terputus.'; });
-        statusEl.textContent='Tersambung! Kembali lihat layar photobooth untuk mulai memotret ✿';
+        statusEl.textContent='Tersambung! Kembali lihat layar iPad/Laptop photobooth untuk mulai memotret ✿';
       });
       peer.on('error',(err)=>{ statusEl.textContent='Gagal tersambung ('+err.type+'). Coba muat ulang halaman ini.'; });
     }catch(err){
@@ -1070,8 +1087,16 @@ document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-s
   const params=new URLSearchParams(location.search);
   const receiveId=params.get('receive');
   const cameraId=params.get('camera');
-  if(receiveId){ showScreen('screen-receive'); connectToHost(receiveId,'receiveStatus','receiveResult'); return; }
-  if(cameraId){ setupBeCamera(cameraId); return; }
+  if(receiveId){
+    setMinimalMode(true);
+    showScreen('screen-receive');
+    connectToHost(receiveId,'receiveStatus','receiveResult');
+    return;
+  }
+  if(cameraId){
+    setupBeCamera(cameraId);
+    return;
+  }
 })();
 
 /* init */
