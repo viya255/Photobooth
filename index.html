@@ -56,6 +56,7 @@
   .stepper .dot.now{border-color:var(--pink-deep); background:white; color:var(--pink-deep);}
   .cam-wrap{position:relative; width:100%; max-width:480px; aspect-ratio:4/3; border-radius:22px; overflow:hidden; background:#2b2130; box-shadow:var(--shadow); border:6px solid white; display:flex; align-items:center; justify-content:center;}
   .cam-wrap video{width:100%; height:100%; object-fit:cover; display:block;}
+  .cam-wrap video.video-mirrored{transform:scaleX(-1);}
   .cam-flash{position:absolute; inset:0; background:white; opacity:0; pointer-events:none;}
   .cam-flash.flash{animation:flashPop .35s ease;}
   @keyframes flashPop{0%{opacity:.9;}100%{opacity:0;}}
@@ -65,9 +66,10 @@
   .shutter{width:74px; height:74px; border-radius:50%; border:5px solid var(--pink-deep); background:white; display:flex; align-items:center; justify-content:center; font-size:26px; cursor:pointer; margin-top:18px; box-shadow:0 10px 22px rgba(233,166,188,0.5); transition:transform .12s ease;}
   .shutter:active{transform:scale(.92);}
   .shutter[disabled]{opacity:.35; cursor:not-allowed;}
-  .cam-source-toggle{display:flex; gap:8px; margin-bottom:14px; font-size:13px;}
+  .cam-source-toggle{display:flex; gap:8px; margin-bottom:14px; font-size:13px; width:100%; max-width:480px; flex-wrap:wrap;}
   .cam-source-toggle button{padding:8px 14px; border-radius:999px; border:2px solid var(--pink); background:white; cursor:pointer; font-family:'Quicksand'; font-weight:600; color:var(--plum-soft);}
   .cam-source-toggle button.active{background:var(--pink-deep); color:white; border-color:var(--pink-deep);}
+  .cam-source-toggle button#mirrorToggleBtn{margin-left:auto;}
   details.help{width:100%; max-width:480px; margin-bottom:14px; background:var(--lavender); border-radius:14px; padding:10px 14px; font-size:13px; color:var(--plum-soft);}
   details.help summary{cursor:pointer; font-weight:700; color:var(--plum);}
   details.help ol{margin:8px 0 2px; padding-left:18px; line-height:1.7;}
@@ -105,15 +107,43 @@
   .link-btn:hover{color:var(--pink-deep);}
   .status-msg{font-size:13px; color:var(--plum-soft); margin-top:10px; min-height:16px; text-align:center;}
   .status-msg.error{color:var(--danger); font-weight:700;}
+
+  /* ---- Riwayat / History dock ---- */
+  .history-dock{
+    position:fixed; top:110px; right:14px; width:106px; max-height:72vh;
+    display:flex; flex-direction:column; gap:10px; padding:12px 8px;
+    background:rgba(255,255,255,.6); border-radius:20px; box-shadow:var(--shadow);
+    backdrop-filter:blur(6px); z-index:20; border:1px solid rgba(233,166,188,0.3);
+  }
+  .history-dock h4{font-size:11px; text-align:center; color:var(--plum-soft); margin:0; letter-spacing:.3px;}
+  #historyList{display:flex; flex-direction:column; gap:10px; overflow-y:auto; overflow-x:hidden; padding-right:2px;}
+  .history-item{position:relative; border-radius:12px; overflow:hidden; cursor:grab; border:2px solid white; box-shadow:0 3px 8px rgba(0,0,0,.12); flex-shrink:0;}
+  .history-item img{width:100%; display:block;}
+  .history-item .hist-del{position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:var(--danger); color:#fff; border:none; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1;}
+  .history-item.dragging{opacity:.35;}
+  .history-empty{font-size:11px; color:var(--plum-soft); text-align:center; padding:10px 2px; line-height:1.5;}
+  @media (max-width:1100px){
+    .history-dock{ left:0; right:0; top:auto; bottom:0; width:100%; max-height:118px; border-radius:20px 20px 0 0; }
+    #historyList{ flex-direction:row; overflow-x:auto; overflow-y:hidden; }
+    .history-item{ width:64px; }
+    .history-dock h4{ display:none; }
+    body{ padding-bottom:150px; }
+  }
+
   @media print{
     body *{visibility:hidden;}
     #printArea, #printArea *{visibility:visible;}
-    #printArea{position:fixed; top:0; left:0; width:2in;}
+    #printArea{display:block !important; position:fixed; top:0; left:0; width:2in;}
     #printArea img{width:2in;}
   }
 </style>
 </head>
 <body>
+
+<div class="history-dock" id="historyDock">
+  <h4>✿ Riwayat</h4>
+  <div id="historyList"></div>
+</div>
 
 <div class="top-nav">
   <button class="link-btn" id="homeBtn">🏠 Beranda</button>
@@ -149,6 +179,7 @@
   <div class="cam-source-toggle">
     <button id="srcBuiltinBtn" class="active">Kamera Perangkat</button>
     <button id="srcPhoneBtn">Kamera HP (Live)</button>
+    <button id="mirrorToggleBtn" type="button">🪞 Cermin: Aktif</button>
   </div>
 
   <details class="help" id="helpBuiltin">
@@ -232,7 +263,7 @@
     <h2>Selesai! Cantik sekali ✨</h2>
     <p class="lead">Simpan, cetak, atau kirim ke HP kamu.</p>
     <canvas id="finalCanvas" width="900" height="3036"></canvas>
-    <div id="printArea" style="display:none;"><img id="printImg"></div>
+    <div id="printArea"><img id="printImg"></div>
 
     <div class="btn-row">
       <button class="btn btn-primary" id="downloadBtn" disabled>⬇ Simpan ke Perangkat</button>
@@ -300,10 +331,13 @@ const LAYOUT = (()=>{
   return {W,H,PAD,GAP,photoW,photoH,footerH,positions};
 })();
 const FRAME_EDIT_PIN = '1234'; // ganti sesuai keinginan kamu
+const HISTORY_KEY = 'petalBoothHistory';
+const HISTORY_MAX = 20;
 
 /* ===================== STATE ===================== */
 const state = {
   camSource:'builtin', stream:null, photos:[], order:[0,1,2,3],
+  mirror:true,
   frames:[
     {id:'f1', name:'Pita Merah Muda', color:'#F9E1EA', accent:'#E9A6BC', emoji:'🎀', builtin:true},
     {id:'f2', name:'Bunga Lavender', color:'#E7DEF9', accent:'#B9A3E3', emoji:'🌸', builtin:true},
@@ -312,9 +346,10 @@ const state = {
   ],
   selectedFrame:null, pendingShot:null, sortable:null,
   editUnlocked:false,
-  hostPeer:null,           // untuk "Kirim ke HP"
-  camPeer:null, camCall:null, // untuk "Kamera HP (Live)" di sisi booth
+  hostPeer:null, hostPeerId:null,   // untuk "Kirim ke HP"
+  camPeer:null, camCall:null,       // untuk "Kamera HP (Live)" di sisi booth
   finalReady:false,
+  history:[], historySortable:null,
 };
 
 /* ===================== NAV ===================== */
@@ -325,7 +360,7 @@ function showScreen(id){
 function fullCleanup(){
   stopCamera();
   if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
-  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; }
+  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
 }
 document.getElementById('homeBtn').onclick = ()=>{ fullCleanup(); showScreen('screen-start'); };
 document.getElementById('brandClick').onclick = ()=>{ fullCleanup(); showScreen('screen-start'); };
@@ -350,12 +385,29 @@ const videoEl = document.getElementById('video');
 document.getElementById('srcBuiltinBtn').onclick=()=>switchSource('builtin');
 document.getElementById('srcPhoneBtn').onclick=()=>switchSource('phone');
 
+/* --- Cermin (mirror) toggle: preview & hasil jepretan sekarang selalu sama persis --- */
+function updateMirrorUI(){
+  const btn=document.getElementById('mirrorToggleBtn');
+  btn.textContent = state.mirror ? '🪞 Cermin: Aktif' : '🪞 Cermin: Mati';
+  btn.classList.toggle('active', state.mirror);
+  videoEl.classList.toggle('video-mirrored', state.mirror);
+}
+document.getElementById('mirrorToggleBtn').onclick=()=>{
+  state.mirror = !state.mirror;
+  updateMirrorUI();
+};
+
 function switchSource(src){
   state.camSource = src;
   document.getElementById('srcBuiltinBtn').classList.toggle('active', src==='builtin');
   document.getElementById('srcPhoneBtn').classList.toggle('active', src==='phone');
   document.getElementById('helpBuiltin').style.display = src==='builtin' ? 'block':'none';
   document.getElementById('helpPhone').style.display = src==='phone' ? 'block':'none';
+
+  // Default cermin: aktif untuk kamera perangkat (selfie), mati untuk kamera HP (biasanya kamera belakang).
+  // Tetap bisa diubah manual lewat tombol 🪞.
+  state.mirror = (src==='builtin');
+  updateMirrorUI();
 
   if(src==='builtin'){
     if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
@@ -381,6 +433,7 @@ async function startBuiltinCamera(){
     state.stream=stream; videoEl.srcObject=stream;
     setCamStatus('Kamera siap! Ketuk tombol jepret ya ✿');
     document.getElementById('shutterBtn').disabled=false;
+    updateMirrorUI();
   }catch(err){
     setCamStatus('Tidak bisa mengakses kamera ('+err.name+'). Buka bantuan "Kamera tidak muncul?" di atas untuk cara mengizinkannya.', true);
   }
@@ -413,6 +466,7 @@ function startPhoneCameraPairing(){
       document.getElementById('phoneQrArea').style.display='none';
       setCamStatus('Kamera HP tersambung! Ketuk tombol jepret ✿');
       document.getElementById('shutterBtn').disabled=false;
+      updateMirrorUI();
     });
     call.on('close', ()=>{ setCamStatus('Koneksi kamera HP terputus.', true); document.getElementById('shutterBtn').disabled=true; });
   });
@@ -427,7 +481,7 @@ document.getElementById('shutterBtn').onclick=()=>{
   if(!w||!h){ setCamStatus('Kamera belum siap, tunggu sebentar ya.', true); return; }
   const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
   const ctx=canvas.getContext('2d');
-  if(state.camSource==='builtin'){ ctx.translate(w,0); ctx.scale(-1,1); } // efek cermin selfie
+  if(state.mirror){ ctx.translate(w,0); ctx.scale(-1,1); } // samakan dengan tampilan preview
   ctx.drawImage(videoEl,0,0,w,h);
   const dataUrl = canvas.toDataURL('image/jpeg',0.92);
   state.pendingShot = dataUrl;
@@ -550,6 +604,8 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   document.getElementById('downloadBtn').disabled=true;
   document.getElementById('printBtn').disabled=true;
   document.getElementById('sendPhoneBtn').disabled=true;
+  document.getElementById('codeBox').style.display='none';
+  document.getElementById('qrWrap').style.display='none';
   state.finalReady=false;
   try{
     await renderFinalCanvas();
@@ -557,6 +613,11 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
     document.getElementById('downloadBtn').disabled=false;
     document.getElementById('printBtn').disabled=false;
     document.getElementById('sendPhoneBtn').disabled=false;
+    // simpan ke riwayat (thumbnail kecil, biar hemat ruang penyimpanan)
+    const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
+    if(thumb) addToHistory(thumb);
+    // siapkan koneksi "Kirim ke HP" dari sekarang, biar QR-nya sudah siap saat tombolnya ditekan
+    initHostPeer();
   }catch(e){
     alert('Gagal menyiapkan hasil akhir: '+e.message);
   }
@@ -638,65 +699,76 @@ document.getElementById('printBtn').onclick=()=>{
   if(!state.finalReady) return;
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
   document.getElementById('printImg').src=dataUrl;
-  document.getElementById('printArea').style.display='block';
-  setTimeout(()=>window.print(), 100); // beri jeda supaya <img> sempat siap sebelum dialog cetak muncul
+  // #printArea tersembunyi di layar biasa (lihat CSS) dan hanya tampil khusus saat mode cetak,
+  // jadi tidak akan muncul membesar mengganggu di layar seperti sebelumnya.
+  setTimeout(()=>window.print(), 120);
 };
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.order=[0,1,2,3]; state.selectedFrame=null;
   document.getElementById('codeBox').style.display='none';
   document.getElementById('qrWrap').style.display='none';
-  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; }
+  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
   showScreen('screen-start');
 };
 
-/* ===================== KIRIM KE HP (QR + WebRTC P2P, dengan retry) ===================== */
-function sendToPhone(){
-  if(!state.finalReady) return;
-  const dataUrl=safeDataUrl(); if(!dataUrl) return;
-
-  const sendBtn=document.getElementById('sendPhoneBtn');
-  sendBtn.disabled=true;
-  document.getElementById('codeBox').style.display='block';
-  document.getElementById('qrWrap').style.display='none';
+/* ===================== KIRIM KE HP (QR + WebRTC P2P, disiapkan lebih awal biar cepat) ===================== */
+function showSendReady(){
+  document.getElementById('qrWrap').style.display='inline-block';
+  document.getElementById('codeBoxText').innerHTML =
+    'Scan QR ini pakai <b>kamera HP</b> kamu.<br>Pastikan HP &amp; perangkat ini sama-sama terhubung internet.<br>'+
+    '<span style="font-size:11px; word-break:break-all;">Kode manual: '+state.hostPeerId+'</span>';
+  document.getElementById('sendPhoneBtn').disabled=false;
   document.getElementById('sendRetryRow').style.display='none';
-  document.getElementById('codeBoxText').textContent='Menyiapkan koneksi…';
-
-  if(state.hostPeer) state.hostPeer.destroy();
+}
+function initHostPeer(){
+  if(state.hostPeer) return; // sudah disiapkan / sedang disiapkan
   const peer=new Peer();
   state.hostPeer=peer;
 
-  let opened=false;
-  const timeoutId=setTimeout(()=>{
-    if(!opened){
-      document.getElementById('codeBoxText').textContent='Koneksi lambat / gagal tersambung ke server.';
-      document.getElementById('sendRetryRow').style.display='flex';
-      sendBtn.disabled=false;
-    }
-  }, 10000);
-
   peer.on('open',(id)=>{
-    opened=true; clearTimeout(timeoutId);
+    state.hostPeerId=id;
     const receiveUrl=location.origin+location.pathname+'?receive='+id;
     QRCode.toCanvas(document.getElementById('qrCanvas'), receiveUrl, {width:180, margin:1, color:{dark:'#5B4B66', light:'#ffffff'}});
-    document.getElementById('qrWrap').style.display='inline-block';
-    document.getElementById('codeBoxText').innerHTML =
-      'Scan QR ini pakai <b>kamera HP</b> kamu.<br>Pastikan HP &amp; perangkat ini sama-sama terhubung internet.<br>'+
-      '<span style="font-size:11px; word-break:break-all;">Kode manual: '+id+'</span>';
-    sendBtn.disabled=false;
+    if(document.getElementById('codeBox').style.display==='block'){ showSendReady(); }
   });
   peer.on('connection',(conn)=>{
     conn.on('open',()=>{
-      conn.send(dataUrl);
+      const dataUrl=safeDataUrl();
+      if(dataUrl) conn.send(dataUrl);
       document.getElementById('codeBoxText').textContent='Tersambung! Foto sedang dikirim ke HP…';
       setTimeout(()=>{ document.getElementById('codeBoxText').textContent='Terkirim! Cek HP kamu untuk simpan foto ✿'; },800);
     });
   });
   peer.on('error',(err)=>{
-    clearTimeout(timeoutId);
-    document.getElementById('codeBoxText').textContent='Gagal membuat koneksi ('+err.type+').';
-    document.getElementById('sendRetryRow').style.display='flex';
-    sendBtn.disabled=false;
+    state.hostPeer=null; state.hostPeerId=null;
+    if(document.getElementById('codeBox').style.display==='block'){
+      document.getElementById('codeBoxText').textContent='Gagal membuat koneksi ('+err.type+').';
+      document.getElementById('sendRetryRow').style.display='flex';
+      document.getElementById('sendPhoneBtn').disabled=false;
+    }
   });
+}
+function sendToPhone(){
+  if(!state.finalReady) return;
+  const sendBtn=document.getElementById('sendPhoneBtn');
+  sendBtn.disabled=true;
+  document.getElementById('codeBox').style.display='block';
+  document.getElementById('sendRetryRow').style.display='none';
+
+  // Kalau koneksi sudah disiapkan dari awal (saat hasil akhir selesai dirender), QR langsung muncul tanpa nunggu.
+  if(state.hostPeer && state.hostPeerId){ showSendReady(); return; }
+
+  document.getElementById('qrWrap').style.display='none';
+  document.getElementById('codeBoxText').textContent='Menyiapkan koneksi…';
+  if(!state.hostPeer) initHostPeer();
+
+  setTimeout(()=>{
+    if(!state.hostPeerId){
+      document.getElementById('codeBoxText').textContent='Koneksi lambat / gagal tersambung ke server.';
+      document.getElementById('sendRetryRow').style.display='flex';
+      sendBtn.disabled=false;
+    }
+  }, 8000);
 }
 document.getElementById('sendPhoneBtn').onclick=sendToPhone;
 document.getElementById('sendRetryBtn').onclick=sendToPhone;
@@ -757,6 +829,66 @@ function setupBeCamera(hostId){
   };
 }
 
+/* ===================== RIWAYAT (dashboard kecil di samping, tersimpan di perangkat ini) ===================== */
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }
+  catch(e){ return []; }
+}
+function saveHistory(){
+  try{
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0,HISTORY_MAX)));
+  }catch(e){
+    // penyimpanan penuh: buang beberapa yang paling lama lalu coba lagi
+    state.history = state.history.slice(0, Math.max(0, state.history.length-4));
+    try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history)); }catch(e2){ /* tetap lanjut tanpa menyimpan */ }
+  }
+}
+function makeThumbnail(sourceCanvas, maxW){
+  try{
+    const scale=maxW/sourceCanvas.width;
+    const tw=maxW, th=Math.round(sourceCanvas.height*scale);
+    const tc=document.createElement('canvas'); tc.width=tw; tc.height=th;
+    tc.getContext('2d').drawImage(sourceCanvas,0,0,tw,th);
+    return tc.toDataURL('image/jpeg',0.75);
+  }catch(e){ return null; }
+}
+function addToHistory(dataUrl){
+  state.history.unshift({id:'h'+Date.now()+Math.floor(Math.random()*1000), dataUrl});
+  if(state.history.length>HISTORY_MAX) state.history.length=HISTORY_MAX;
+  saveHistory();
+  renderHistoryDock();
+}
+function renderHistoryDock(){
+  const list=document.getElementById('historyList');
+  list.innerHTML='';
+  if(state.history.length===0){
+    list.innerHTML='<div class="history-empty">Belum ada foto tersimpan ✿</div>';
+    return;
+  }
+  state.history.forEach(item=>{
+    const div=document.createElement('div'); div.className='history-item'; div.dataset.id=item.id;
+    const img=document.createElement('img'); img.src=item.dataUrl; img.title='Ketuk untuk unduh lagi';
+    img.onclick=()=>{ const a=document.createElement('a'); a.href=item.dataUrl; a.download='petal-booth-'+item.id+'.jpg'; a.click(); };
+    const del=document.createElement('button'); del.className='hist-del'; del.textContent='✕'; del.title='Hapus dari riwayat';
+    del.onclick=(ev)=>{
+      ev.stopPropagation();
+      state.history=state.history.filter(x=>x.id!==item.id);
+      saveHistory(); renderHistoryDock();
+    };
+    div.appendChild(img); div.appendChild(del);
+    list.appendChild(div);
+  });
+  if(state.historySortable) state.historySortable.destroy();
+  state.historySortable = new Sortable(list, {
+    animation:150, ghostClass:'dragging',
+    onEnd:()=>{
+      const ids=Array.from(list.querySelectorAll('.history-item')).map(el=>el.dataset.id);
+      state.history = ids.map(id=>state.history.find(x=>x.id===id)).filter(Boolean);
+      saveHistory();
+    }
+  });
+}
+
 /* ===================== AUTO-DETECT QUERY PARAM ===================== */
 (function initFromQuery(){
   const params=new URLSearchParams(location.search);
@@ -768,6 +900,9 @@ function setupBeCamera(hostId){
 
 /* init */
 highlightOpt('optBuiltin');
+updateMirrorUI();
+state.history = loadHistory();
+renderHistoryDock();
 </script>
 </body>
 </html>
