@@ -110,27 +110,45 @@
   .status-msg{font-size:13px; color:var(--plum-soft); margin-top:10px; min-height:16px; text-align:center;}
   .status-msg.error{color:var(--danger); font-weight:700;}
 
-  /* ---- Riwayat / History dock ---- */
-  .history-dock{
-    position:fixed; top:110px; right:14px; width:106px; max-height:72vh;
-    display:flex; flex-direction:column; gap:10px; padding:12px 8px;
-    background:rgba(255,255,255,.6); border-radius:20px; box-shadow:var(--shadow);
-    backdrop-filter:blur(6px); z-index:20; border:1px solid rgba(233,166,188,0.3);
+  /* ---- Riwayat: tersebar abstrak di area kosong kiri & kanan layar ---- */
+  .history-scatter{position:fixed; top:96px; bottom:96px; width:210px; pointer-events:none; z-index:15;}
+  .history-scatter.left{left:0;}
+  .history-scatter.right{right:0;}
+  .history-scatter .history-item{
+    position:absolute; pointer-events:auto; width:74px; border-radius:10px; overflow:hidden;
+    border:3px solid white; box-shadow:0 8px 18px rgba(90,70,90,.22); cursor:pointer;
+    transition:transform .2s ease, box-shadow .2s ease;
   }
-  .history-dock h4{font-size:11px; text-align:center; color:var(--plum-soft); margin:0; letter-spacing:.3px;}
-  #historyList{display:flex; flex-direction:column; gap:10px; overflow-y:auto; overflow-x:hidden; padding-right:2px;}
-  .history-item{position:relative; border-radius:12px; overflow:hidden; cursor:grab; border:2px solid white; box-shadow:0 3px 8px rgba(0,0,0,.12); flex-shrink:0;}
-  .history-item img{width:100%; display:block;}
-  .history-item .hist-del{position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:var(--danger); color:#fff; border:none; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1;}
-  .history-item.dragging{opacity:.35;}
-  .history-empty{font-size:11px; color:var(--plum-soft); text-align:center; padding:10px 2px; line-height:1.5;}
+  .history-scatter .history-item:hover{ box-shadow:0 14px 28px rgba(90,70,90,.34); z-index:5; }
+  .history-scatter .history-item img{width:100%; display:block;}
+  .history-scatter .history-item .hist-del{
+    position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%;
+    background:var(--danger); color:#fff; border:none; font-size:10px; display:none;
+    align-items:center; justify-content:center; cursor:pointer; line-height:1;
+  }
+  .history-scatter .history-item:hover .hist-del{display:flex;}
+  .history-fab{
+    position:fixed; right:16px; bottom:16px; width:52px; height:52px; border-radius:50%;
+    background:linear-gradient(135deg, var(--pink-deep), var(--lavender-deep)); color:#fff; border:none;
+    box-shadow:var(--shadow); font-size:20px; display:none; align-items:center; justify-content:center;
+    cursor:pointer; z-index:25;
+  }
+  .history-empty{font-size:12px; color:var(--plum-soft); text-align:center; padding:14px 6px; line-height:1.5;}
   @media (max-width:1100px){
-    .history-dock{ left:0; right:0; top:auto; bottom:0; width:100%; max-height:118px; border-radius:20px 20px 0 0; }
-    #historyList{ flex-direction:row; overflow-x:auto; overflow-y:hidden; }
-    .history-item{ width:64px; }
-    .history-dock h4{ display:none; }
-    body{ padding-bottom:150px; }
+    .history-scatter{display:none;}
+    .history-fab{display:flex;}
   }
+
+  /* ---- Riwayat Foto: layar daftar lengkap dengan nama / tanggal / jam ---- */
+  .history-list-full{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:12px;}
+  .history-row{display:flex; align-items:center; gap:14px; background:var(--cream); border-radius:16px; padding:10px 12px; border:1px solid rgba(233,166,188,.3);}
+  .history-row img{width:52px; border-radius:10px; box-shadow:0 3px 8px rgba(0,0,0,.12); flex-shrink:0;}
+  .history-row .meta{flex:1; font-size:13px; color:var(--plum); min-width:0;}
+  .history-row .meta b{display:block; font-size:14px; font-family:'Fraunces',serif; font-weight:600;}
+  .history-row .meta span{color:var(--plum-soft); font-size:12px;}
+  .history-row .row-actions{display:flex; gap:6px; flex-shrink:0;}
+  .history-row .row-actions button{width:32px; height:32px; border-radius:999px; background:var(--white); border:2px solid var(--pink); color:var(--plum); font-size:13px; cursor:pointer;}
+  .history-row .row-actions button.del{border-color:var(--danger); color:var(--danger);}
 
   @media print{
     body *{visibility:hidden;}
