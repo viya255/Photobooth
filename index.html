@@ -100,9 +100,11 @@
   .code-box p{margin:10px 0 0; font-size:13px; color:var(--plum-soft);}
   #qrWrap, .qr-box{background:white; border-radius:14px; padding:12px; display:inline-block;}
   #qrWrap{display:none;}
+  .qr-box img{width:180px; height:180px; display:block;}
   .retrieve-form{display:flex; gap:10px; width:100%; margin-top:16px;}
   .retrieve-form input{flex:1; padding:14px; border-radius:14px; border:2px solid var(--pink); font-size:14px; text-align:center; font-family:'Quicksand',sans-serif;}
   .top-nav{display:flex; justify-content:space-between; width:100%; max-width:640px; margin-bottom:10px;}
+  .top-nav .nav-right{display:flex; gap:16px;}
   .link-btn{background:none; border:none; color:var(--plum-soft); font-family:'Quicksand'; font-weight:600; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:4px;}
   .link-btn:hover{color:var(--pink-deep);}
   .status-msg{font-size:13px; color:var(--plum-soft); margin-top:10px; min-height:16px; text-align:center;}
@@ -147,7 +149,10 @@
 
 <div class="top-nav">
   <button class="link-btn" id="homeBtn">🏠 Beranda</button>
-  <button class="link-btn" id="retrieveNavBtn">📱 Punya Kode Manual?</button>
+  <div class="nav-right">
+    <button class="link-btn" id="manageFramesBtn">🖼️ Kelola Frame</button>
+    <button class="link-btn" id="retrieveNavBtn">📱 Punya Kode Manual?</button>
+  </div>
 </div>
 
 <div class="brand" id="brandClick">
@@ -201,7 +206,7 @@
   </details>
 
   <div id="phoneQrArea" style="display:none; text-align:center; margin-bottom:14px;">
-    <div class="qr-box"><canvas id="camQrCanvas"></canvas></div>
+    <div class="qr-box"><img id="camQrImg" alt="QR kamera HP"></div>
     <p class="status-msg" id="camPairStatus">Menyiapkan kode QR…</p>
   </div>
 
@@ -229,14 +234,9 @@
 <div class="screen" id="screen-frame">
   <div class="stepper"><div class="dot done">📷</div><div class="dot now">🖼️</div><div class="dot">✓</div></div>
   <div class="card">
-    <div class="frame-head">
-      <h2>Pilih frame favoritmu</h2>
-      <button class="lock-toggle" id="lockToggleBtn">🔒 Terkunci</button>
-    </div>
-    <p class="lead">Sentuh salah satu frame untuk memakainya. Geser (drag) foto di photostrip untuk mengatur urutan.</p>
+    <h2>Pilih frame favoritmu</h2>
+    <p class="lead">Sentuh salah satu frame untuk memakainya. Geser (drag) foto di photostrip untuk mengatur urutan. Mau nambah frame baru? Atur di menu "🖼️ Kelola Frame" di halaman depan.</p>
     <div class="frame-gallery" id="frameGallery"></div>
-    <input type="file" id="frameUpload" accept="image/png,image/jpeg" style="display:none;">
-    <div class="frame-size-note" id="frameSizeNote"></div>
 
     <div class="strip-editor">
       <div class="strip-preview" id="stripPreview"></div>
@@ -244,8 +244,7 @@
         <h3 style="font-size:16px;">Tips mengedit</h3>
         <ul>
           <li>Tahan &amp; geser foto untuk tukar posisi</li>
-          <li>Ketuk "🔓 Edit dibuka" (masukkan PIN) untuk bisa upload / hapus frame — kunci lagi saat acara berlangsung biar tamu tidak iseng menghapus</li>
-          <li>Desain frame di Canva memakai ukuran &amp; posisi kotak foto yang tertera di atas, lalu ekspor PNG transparan</li>
+          <li>Frame favorit akan tersimpan otomatis untuk sesi berikutnya</li>
         </ul>
       </div>
     </div>
@@ -253,6 +252,18 @@
       <button class="btn btn-ghost" id="backToCaptureBtn">← Foto Ulang</button>
       <button class="btn btn-primary" id="toFinalBtn">Lanjut →</button>
     </div>
+  </div>
+</div>
+
+<!-- MANAGE FRAMES (halaman depan) -->
+<div class="screen" id="screen-manage-frames">
+  <div class="card">
+    <h2 style="margin-bottom:6px;">Kelola Frame</h2>
+    <p class="lead">Tambah atau hapus frame di sini sebelum sesi foto dimulai. Frame yang tersimpan akan muncul sebagai pilihan saat tamu memilih frame nanti.</p>
+    <div class="frame-gallery" id="manageFrameGallery"></div>
+    <input type="file" id="frameUpload" accept="image/png,image/jpeg" style="display:none;">
+    <div class="frame-size-note" id="frameSizeNote"></div>
+    <div class="btn-row"><button class="btn btn-ghost" id="backFromManageBtn">← Kembali ke Beranda</button></div>
   </div>
 </div>
 
@@ -272,7 +283,7 @@
     </div>
 
     <div class="code-box" id="codeBox" style="display:none;">
-      <div class="qr-box" id="qrWrap"><canvas id="qrCanvas"></canvas></div>
+      <div class="qr-box" id="qrWrap"><img id="qrImg" alt="QR kirim ke HP"></div>
       <p id="codeBoxText">Menyiapkan koneksi…</p>
       <div class="btn-row" id="sendRetryRow" style="display:none;">
         <button class="btn btn-ghost" id="sendRetryBtn">↻ Coba Lagi</button>
@@ -330,7 +341,6 @@ const LAYOUT = (()=>{
   for(let i=0;i<4;i++){ positions.push(y); y+=photoH+GAP; }
   return {W,H,PAD,GAP,photoW,photoH,footerH,positions};
 })();
-const FRAME_EDIT_PIN = '1234'; // ganti sesuai keinginan kamu
 const HISTORY_KEY = 'petalBoothHistory';
 const HISTORY_MAX = 20;
 
@@ -345,7 +355,6 @@ const state = {
     {id:'f4', name:'Kilau Emas', color:'#FFF3DC', accent:'#D9B26E', emoji:'✨', builtin:true},
   ],
   selectedFrame:null, pendingShot:null, sortable:null,
-  editUnlocked:false,
   hostPeer:null, hostPeerId:null,   // untuk "Kirim ke HP"
   camPeer:null, camCall:null,       // untuk "Kamera HP (Live)" di sisi booth
   finalReady:false,
@@ -445,7 +454,6 @@ function stopCamera(){
 /* --- Kamera HP (Live) via WebRTC + QR, dipasangkan dari sisi booth --- */
 function startPhoneCameraPairing(){
   document.getElementById('phoneQrArea').style.display='block';
-  const qrCanvas=document.getElementById('camQrCanvas');
   const pairStatus=document.getElementById('camPairStatus');
   pairStatus.textContent='Menyiapkan kode QR…';
 
@@ -455,8 +463,15 @@ function startPhoneCameraPairing(){
 
   peer.on('open', (id)=>{
     const url = location.origin + location.pathname + '?camera=' + id;
-    QRCode.toCanvas(qrCanvas, url, {width:180, margin:1, color:{dark:'#5B4B66', light:'#ffffff'}});
-    pairStatus.textContent = 'Scan QR ini pakai kamera HP kamu untuk menyambungkan.';
+    QRCode.toDataURL(url, {width:180, margin:1, color:{dark:'#5B4B66', light:'#ffffff'}})
+      .then(dataUrl=>{
+        document.getElementById('camQrImg').src=dataUrl;
+        pairStatus.textContent = 'Scan QR ini pakai kamera HP kamu untuk menyambungkan.';
+      })
+      .catch(err=>{
+        console.error('Gagal membuat QR kamera HP:', err);
+        pairStatus.textContent = 'QR gagal dibuat. Coba ketuk ulang tombol "Kamera HP (Live)".';
+      });
   });
   peer.on('call', (call)=>{
     call.answer(); // booth tidak mengirim stream balik, hanya menerima
@@ -517,20 +532,7 @@ function renderShotsRow(){
 }
 document.getElementById('backToCaptureBtn').onclick=()=>{ showScreen('screen-capture'); switchSource(state.camSource); };
 
-/* ===================== FRAME SCREEN ===================== */
-document.getElementById('lockToggleBtn').onclick=()=>{
-  if(state.editUnlocked){
-    state.editUnlocked=false;
-  } else {
-    const pin=prompt('Masukkan PIN untuk membuka edit frame:');
-    if(pin===FRAME_EDIT_PIN) state.editUnlocked=true;
-    else if(pin!==null) alert('PIN salah.');
-  }
-  const btn=document.getElementById('lockToggleBtn');
-  btn.textContent = state.editUnlocked ? '🔓 Edit dibuka' : '🔒 Terkunci';
-  btn.classList.toggle('unlocked', state.editUnlocked);
-  buildFrameGallery();
-};
+/* ===================== FRAME SCREEN (pilih frame saja, tanpa edit) ===================== */
 function buildFrameGallery(){
   const gal=document.getElementById('frameGallery'); gal.innerHTML='';
   state.frames.forEach(f=>{
@@ -542,44 +544,62 @@ function buildFrameGallery(){
     } else {
       el.style.backgroundImage=`url(${f.dataUrl})`; el.style.backgroundSize='cover';
       el.innerHTML=`<span class="label">${f.name}</span>`;
-      if(state.editUnlocked){
-        const del=document.createElement('button');
-        del.className='del-btn'; del.textContent='✕';
-        del.onclick=(ev)=>{
-          ev.stopPropagation();
-          state.frames = state.frames.filter(x=>x.id!==f.id);
-          if(state.selectedFrame && state.selectedFrame.id===f.id) state.selectedFrame=state.frames[0];
-          buildFrameGallery(); buildStripPreview();
-        };
-        el.appendChild(del);
-      }
     }
     el.onclick=()=>{ state.selectedFrame=f; buildFrameGallery(); buildStripPreview(); };
     gal.appendChild(el);
   });
-  if(state.editUnlocked){
-    const uploadTile=document.createElement('div');
-    uploadTile.className='upload-frame-tile';
-    uploadTile.innerHTML='<span style="font-size:20px;">➕</span><span>Upload Frame</span>';
-    uploadTile.onclick=()=>document.getElementById('frameUpload').click();
-    gal.appendChild(uploadTile);
-  }
   if(!state.selectedFrame) state.selectedFrame=state.frames[0];
+}
+
+/* ===================== KELOLA FRAME (halaman depan: upload / hapus) ===================== */
+document.getElementById('manageFramesBtn').onclick=()=>{ buildManageFrameGallery(); showScreen('screen-manage-frames'); };
+document.getElementById('backFromManageBtn').onclick=()=>{ showScreen('screen-start'); };
+
+function buildManageFrameGallery(){
+  const gal=document.getElementById('manageFrameGallery'); gal.innerHTML='';
+  state.frames.forEach(f=>{
+    const el=document.createElement('div');
+    el.className='frame-thumb';
+    if(f.builtin){
+      el.style.background=`linear-gradient(160deg, ${f.color}, white)`;
+      el.innerHTML=`<div style="font-size:22px;">${f.emoji}</div><span class="label">${f.name}</span>`;
+    } else {
+      el.style.backgroundImage=`url(${f.dataUrl})`; el.style.backgroundSize='cover';
+      el.innerHTML=`<span class="label">${f.name}</span>`;
+      const del=document.createElement('button');
+      del.className='del-btn'; del.textContent='✕'; del.title='Hapus frame ini';
+      del.onclick=(ev)=>{
+        ev.stopPropagation();
+        state.frames = state.frames.filter(x=>x.id!==f.id);
+        if(state.selectedFrame && state.selectedFrame.id===f.id) state.selectedFrame=null;
+        buildManageFrameGallery();
+      };
+      el.appendChild(del);
+    }
+    gal.appendChild(el);
+  });
+  const uploadTile=document.createElement('div');
+  uploadTile.className='upload-frame-tile';
+  uploadTile.innerHTML='<span style="font-size:20px;">➕</span><span>Upload Frame</span>';
+  uploadTile.onclick=()=>document.getElementById('frameUpload').click();
+  gal.appendChild(uploadTile);
 
   document.getElementById('frameSizeNote').innerHTML =
     `Ukuran frame custom: <b>${LAYOUT.W} × ${LAYOUT.H}px</b>, PNG transparan. `+
     `4 kotak foto masing-masing <b>${LAYOUT.photoW} × ${LAYOUT.photoH}px</b>, dimulai dari sisi kiri ${LAYOUT.PAD}px, `+
-    `posisi atas tiap kotak: ${LAYOUT.positions.join('px, ')}px. Bagian bawah ${LAYOUT.footerH}px dibiarkan kosong untuk teks tanggal.`;
+    `posisi atas tiap kotak: ${LAYOUT.positions.join('px, ')}px. Bagian bawah ${LAYOUT.footerH}px dibiarkan kosong untuk teks tanggal. `+
+    `Desain di Canva memakai ukuran &amp; posisi kotak foto di atas, lalu ekspor PNG transparan.`;
 }
 document.getElementById('frameUpload').onchange=(e)=>{
   const file=e.target.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=()=>{
     const f={id:'custom-'+Date.now(), name:'Frame Kamu', dataUrl:reader.result, builtin:false};
-    state.frames.push(f); state.selectedFrame=f;
-    buildFrameGallery(); buildStripPreview();
+    state.frames.push(f);
+    buildManageFrameGallery();
   };
   reader.readAsDataURL(file);
+  e.target.value='';
 };
 
 function buildStripPreview(){
@@ -728,8 +748,20 @@ function initHostPeer(){
   peer.on('open',(id)=>{
     state.hostPeerId=id;
     const receiveUrl=location.origin+location.pathname+'?receive='+id;
-    QRCode.toCanvas(document.getElementById('qrCanvas'), receiveUrl, {width:180, margin:1, color:{dark:'#5B4B66', light:'#ffffff'}});
-    if(document.getElementById('codeBox').style.display==='block'){ showSendReady(); }
+    QRCode.toDataURL(receiveUrl, {width:180, margin:1, color:{dark:'#5B4B66', light:'#ffffff'}})
+      .then(dataUrl=>{
+        document.getElementById('qrImg').src=dataUrl;
+        if(document.getElementById('codeBox').style.display==='block'){ showSendReady(); }
+      })
+      .catch(err=>{
+        console.error('Gagal membuat QR kirim ke HP:', err);
+        if(document.getElementById('codeBox').style.display==='block'){
+          document.getElementById('codeBoxText').innerHTML =
+            'QR gagal dibuat, tapi kamu masih bisa pakai kode manual ini di HP (menu "Punya Kode Manual?"):<br>'+
+            '<span style="font-size:11px; word-break:break-all;">'+state.hostPeerId+'</span>';
+          document.getElementById('sendPhoneBtn').disabled=false;
+        }
+      });
   });
   peer.on('connection',(conn)=>{
     conn.on('open',()=>{
