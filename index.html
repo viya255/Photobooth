@@ -150,6 +150,7 @@
   .history-row .row-actions button{width:32px; height:32px; border-radius:999px; background:var(--white); border:2px solid var(--pink); color:var(--plum); font-size:13px; cursor:pointer;}
   .history-row .row-actions button.del{border-color:var(--danger); color:var(--danger);}
 
+  #printArea{display:none;}
   @media print{
     body *{visibility:hidden;}
     #printArea, #printArea *{visibility:visible;}
@@ -160,14 +161,14 @@
 </head>
 <body>
 
-<div class="history-dock" id="historyDock">
-  <h4>✿ Riwayat</h4>
-  <div id="historyList"></div>
-</div>
+<div class="history-scatter left" id="historyScatterLeft"></div>
+<div class="history-scatter right" id="historyScatterRight"></div>
+<button class="history-fab" id="historyFab" title="Riwayat">🗂️</button>
 
 <div class="top-nav">
   <button class="link-btn" id="homeBtn">🏠 Beranda</button>
   <div class="nav-right">
+    <button class="link-btn" id="historyNavBtn">🗂️ Riwayat</button>
     <button class="link-btn" id="manageFramesBtn">🖼️ Kelola Frame</button>
     <button class="link-btn" id="retrieveNavBtn">📱 Punya Kode Manual?</button>
   </div>
@@ -285,6 +286,16 @@
   </div>
 </div>
 
+<!-- RIWAYAT (daftar lengkap) -->
+<div class="screen" id="screen-history">
+  <div class="card">
+    <h2 style="margin-bottom:6px;">Riwayat Foto</h2>
+    <p class="lead">Semua hasil foto yang tersimpan di perangkat ini, lengkap dengan tanggal &amp; jam pengambilan.</p>
+    <div class="history-list-full" id="historyListFull"></div>
+    <div class="btn-row"><button class="btn btn-ghost" id="backFromHistoryBtn">← Kembali ke Beranda</button></div>
+  </div>
+</div>
+
 <!-- FINAL -->
 <div class="screen" id="screen-final">
   <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
@@ -376,7 +387,7 @@ const state = {
   hostPeer:null, hostPeerId:null,   // untuk "Kirim ke HP"
   camPeer:null, camCall:null,       // untuk "Kamera HP (Live)" di sisi booth
   finalReady:false,
-  history:[], historySortable:null,
+  history:[],
 };
 
 /* ===================== NAV ===================== */
@@ -474,12 +485,28 @@ function startPhoneCameraPairing(){
   document.getElementById('phoneQrArea').style.display='block';
   const pairStatus=document.getElementById('camPairStatus');
   pairStatus.textContent='Menyiapkan kode QR…';
+  pairStatus.classList.remove('error');
+  pairStatus.style.cursor='default';
+  pairStatus.onclick=null;
 
   if(state.camPeer) state.camPeer.destroy();
   const peer = new Peer();
   state.camPeer = peer;
+  let opened=false;
+
+  const timeoutId=setTimeout(()=>{
+    if(!opened){
+      pairStatus.innerHTML='Kode QR gagal dibuat (koneksi ke server pairing lambat/diblokir). '+
+        'Ini sering terjadi di jaringan kantor/sekolah yang membatasi koneksi, atau karena ekstensi browser (ad-blocker/shield). '+
+        'Coba matikan sebentar ekstensi shield di address bar, pindah ke jaringan lain, atau <u>ketuk di sini untuk coba lagi</u>.';
+      pairStatus.classList.add('error');
+      pairStatus.style.cursor='pointer';
+      pairStatus.onclick=()=>{ if(state.camSource==='phone') startPhoneCameraPairing(); };
+    }
+  }, 9000);
 
   peer.on('open', (id)=>{
+    opened=true; clearTimeout(timeoutId);
     const url = location.origin + location.pathname + '?camera=' + id;
     QRCode.toDataURL(url, {width:180, margin:1, color:{dark:'#5B4B66', light:'#ffffff'}})
       .then(dataUrl=>{
@@ -504,7 +531,12 @@ function startPhoneCameraPairing(){
     call.on('close', ()=>{ setCamStatus('Koneksi kamera HP terputus.', true); document.getElementById('shutterBtn').disabled=true; });
   });
   peer.on('error', (err)=>{
-    pairStatus.textContent = 'Gagal membuat kode QR ('+err.type+'). Ketuk ulang tombol "Kamera HP (Live)".';
+    opened=true; clearTimeout(timeoutId);
+    console.error('Peer error (camera pairing):', err);
+    pairStatus.innerHTML='Gagal membuat kode QR ('+err.type+'). Kemungkinan jaringan/ekstensi browser memblokir koneksi. <u>Ketuk di sini untuk coba lagi</u>.';
+    pairStatus.classList.add('error');
+    pairStatus.style.cursor='pointer';
+    pairStatus.onclick=()=>{ if(state.camSource==='phone') startPhoneCameraPairing(); };
   });
 }
 
@@ -737,8 +769,8 @@ document.getElementById('printBtn').onclick=()=>{
   if(!state.finalReady) return;
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
   document.getElementById('printImg').src=dataUrl;
-  // #printArea tersembunyi di layar biasa (lihat CSS) dan hanya tampil khusus saat mode cetak,
-  // jadi tidak akan muncul membesar mengganggu di layar seperti sebelumnya.
+  // #printArea disembunyikan di layar biasa (display:none) dan hanya tampil khusus saat mode cetak (@media print),
+  // jadi tidak akan muncul membesar mengganggu di layar.
   setTimeout(()=>window.print(), 120);
 };
 document.getElementById('newSessionBtn').onclick=()=>{
@@ -762,8 +794,20 @@ function initHostPeer(){
   if(state.hostPeer) return; // sudah disiapkan / sedang disiapkan
   const peer=new Peer();
   state.hostPeer=peer;
+  let opened=false;
+
+  const timeoutId=setTimeout(()=>{
+    if(!opened && document.getElementById('codeBox').style.display==='block'){
+      document.getElementById('codeBoxText').innerHTML =
+        'Koneksi ke server QR lambat/gagal. Ini sering karena jaringan (WiFi kantor/sekolah) atau ekstensi browser '+
+        '(ad-blocker/privacy shield) memblokir koneksi WebSocket. Coba matikan sebentar ekstensi tersebut, pindah jaringan, atau tekan Coba Lagi.';
+      document.getElementById('sendRetryRow').style.display='flex';
+      document.getElementById('sendPhoneBtn').disabled=false;
+    }
+  }, 9000);
 
   peer.on('open',(id)=>{
+    opened=true; clearTimeout(timeoutId);
     state.hostPeerId=id;
     const receiveUrl=location.origin+location.pathname+'?receive='+id;
     QRCode.toDataURL(receiveUrl, {width:180, margin:1, color:{dark:'#5B4B66', light:'#ffffff'}})
@@ -790,9 +834,11 @@ function initHostPeer(){
     });
   });
   peer.on('error',(err)=>{
+    opened=true; clearTimeout(timeoutId);
+    console.error('Peer error (send to phone):', err);
     state.hostPeer=null; state.hostPeerId=null;
     if(document.getElementById('codeBox').style.display==='block'){
-      document.getElementById('codeBoxText').textContent='Gagal membuat koneksi ('+err.type+').';
+      document.getElementById('codeBoxText').textContent='Gagal membuat koneksi ('+err.type+'). Kemungkinan jaringan/ekstensi browser memblokir koneksi.';
       document.getElementById('sendRetryRow').style.display='flex';
       document.getElementById('sendPhoneBtn').disabled=false;
     }
@@ -811,17 +857,12 @@ function sendToPhone(){
   document.getElementById('qrWrap').style.display='none';
   document.getElementById('codeBoxText').textContent='Menyiapkan koneksi…';
   if(!state.hostPeer) initHostPeer();
-
-  setTimeout(()=>{
-    if(!state.hostPeerId){
-      document.getElementById('codeBoxText').textContent='Koneksi lambat / gagal tersambung ke server.';
-      document.getElementById('sendRetryRow').style.display='flex';
-      sendBtn.disabled=false;
-    }
-  }, 8000);
 }
 document.getElementById('sendPhoneBtn').onclick=sendToPhone;
-document.getElementById('sendRetryBtn').onclick=sendToPhone;
+document.getElementById('sendRetryBtn').onclick=()=>{
+  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
+  sendToPhone();
+};
 
 /* ===================== TERIMA FOTO DI HP (dari QR "Kirim ke HP") ===================== */
 function connectToHost(hostId, statusElId, resultElId){
@@ -879,7 +920,7 @@ function setupBeCamera(hostId){
   };
 }
 
-/* ===================== RIWAYAT (dashboard kecil di samping, tersimpan di perangkat ini) ===================== */
+/* ===================== RIWAYAT (tersebar di samping dashboard + daftar lengkap) ===================== */
 function loadHistory(){
   try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }
   catch(e){ return []; }
@@ -903,41 +944,78 @@ function makeThumbnail(sourceCanvas, maxW){
   }catch(e){ return null; }
 }
 function addToHistory(dataUrl){
-  state.history.unshift({id:'h'+Date.now()+Math.floor(Math.random()*1000), dataUrl});
+  state.history.unshift({id:'h'+Date.now()+Math.floor(Math.random()*1000), dataUrl, time:Date.now()});
   if(state.history.length>HISTORY_MAX) state.history.length=HISTORY_MAX;
   saveHistory();
-  renderHistoryDock();
+  renderHistoryAll();
 }
-function renderHistoryDock(){
-  const list=document.getElementById('historyList');
-  list.innerHTML='';
+function removeFromHistory(id){
+  state.history=state.history.filter(x=>x.id!==id);
+  saveHistory();
+  renderHistoryAll();
+}
+function downloadHistoryItem(item){
+  const a=document.createElement('a'); a.href=item.dataUrl; a.download='petal-booth-'+item.id+'.jpg'; a.click();
+}
+function renderHistoryAll(){
+  renderHistoryScatter();
+  renderHistoryFull();
+}
+/* Riwayat tersebar kecil-kecil di ruang kosong kiri & kanan dashboard, seperti pola tempel foto */
+function renderHistoryScatter(){
+  const leftEl=document.getElementById('historyScatterLeft');
+  const rightEl=document.getElementById('historyScatterRight');
+  if(!leftEl||!rightEl) return;
+  leftEl.innerHTML=''; rightEl.innerHTML='';
+  const items = state.history.slice(0, 10);
+  items.forEach((item, i)=>{
+    const side = i%2===0 ? leftEl : rightEl;
+    const sideIndex = Math.floor(i/2);
+    const topPct = 4 + sideIndex*21 + (i%3)*3;
+    const edgePx = 14 + ((i*29)%34);
+    const rotate = (((i*53)%17)-8);
+    const div=document.createElement('div'); div.className='history-item'; div.dataset.id=item.id;
+    div.style.top = Math.min(topPct,86)+'%';
+    if(side===leftEl){ div.style.left = edgePx+'px'; } else { div.style.right = edgePx+'px'; }
+    div.style.transform = `rotate(${rotate}deg)`;
+    const img=document.createElement('img'); img.src=item.dataUrl; img.title='Ketuk untuk unduh lagi';
+    img.onclick=()=>downloadHistoryItem(item);
+    const del=document.createElement('button'); del.className='hist-del'; del.textContent='✕'; del.title='Hapus dari riwayat';
+    del.onclick=(ev)=>{ ev.stopPropagation(); removeFromHistory(item.id); };
+    div.appendChild(img); div.appendChild(del);
+    side.appendChild(div);
+  });
+}
+/* Daftar riwayat lengkap dengan nama sesi + tanggal + jam */
+function renderHistoryFull(){
+  const wrap=document.getElementById('historyListFull');
+  if(!wrap) return;
+  wrap.innerHTML='';
   if(state.history.length===0){
-    list.innerHTML='<div class="history-empty">Belum ada foto tersimpan ✿</div>';
+    wrap.innerHTML='<div class="history-empty">Belum ada foto tersimpan ✿</div>';
     return;
   }
-  state.history.forEach(item=>{
-    const div=document.createElement('div'); div.className='history-item'; div.dataset.id=item.id;
-    const img=document.createElement('img'); img.src=item.dataUrl; img.title='Ketuk untuk unduh lagi';
-    img.onclick=()=>{ const a=document.createElement('a'); a.href=item.dataUrl; a.download='petal-booth-'+item.id+'.jpg'; a.click(); };
-    const del=document.createElement('button'); del.className='hist-del'; del.textContent='✕'; del.title='Hapus dari riwayat';
-    del.onclick=(ev)=>{
-      ev.stopPropagation();
-      state.history=state.history.filter(x=>x.id!==item.id);
-      saveHistory(); renderHistoryDock();
-    };
-    div.appendChild(img); div.appendChild(del);
-    list.appendChild(div);
-  });
-  if(state.historySortable) state.historySortable.destroy();
-  state.historySortable = new Sortable(list, {
-    animation:150, ghostClass:'dragging',
-    onEnd:()=>{
-      const ids=Array.from(list.querySelectorAll('.history-item')).map(el=>el.dataset.id);
-      state.history = ids.map(id=>state.history.find(x=>x.id===id)).filter(Boolean);
-      saveHistory();
-    }
+  state.history.forEach((item, idx)=>{
+    const row=document.createElement('div'); row.className='history-row';
+    const img=document.createElement('img'); img.src=item.dataUrl;
+    const meta=document.createElement('div'); meta.className='meta';
+    const d=new Date(item.time||parseInt(String(item.id).replace(/\D/g,'').slice(0,13))||Date.now());
+    const dateStr=d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+    const timeStr=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+    meta.innerHTML=`<b>Sesi Foto #${state.history.length-idx}</b><span>${dateStr} · ${timeStr}</span>`;
+    const actions=document.createElement('div'); actions.className='row-actions';
+    const dl=document.createElement('button'); dl.textContent='⬇'; dl.title='Unduh';
+    dl.onclick=()=>downloadHistoryItem(item);
+    const del=document.createElement('button'); del.className='del'; del.textContent='✕'; del.title='Hapus';
+    del.onclick=()=>removeFromHistory(item.id);
+    actions.appendChild(dl); actions.appendChild(del);
+    row.appendChild(img); row.appendChild(meta); row.appendChild(actions);
+    wrap.appendChild(row);
   });
 }
+document.getElementById('historyNavBtn').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
+document.getElementById('historyFab').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
+document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-start'); };
 
 /* ===================== AUTO-DETECT QUERY PARAM ===================== */
 (function initFromQuery(){
@@ -952,7 +1030,7 @@ function renderHistoryDock(){
 highlightOpt('optBuiltin');
 updateMirrorUI();
 state.history = loadHistory();
-renderHistoryDock();
+renderHistoryAll();
 </script>
 </body>
 </html>
