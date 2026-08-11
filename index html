@@ -164,13 +164,14 @@
   /* FINAL */
   #finalCanvas{max-width:220px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;}
   .code-box{
-    background:var(--lavender); border-radius:16px; padding:16px 20px; text-align:center; margin-top:16px; width:100%;
+    background:var(--lavender); border-radius:16px; padding:18px 20px; text-align:center; margin-top:16px; width:100%;
   }
-  .code-box .code{font-family:'Fraunces',serif; font-size:34px; letter-spacing:6px; color:var(--plum); font-weight:600;}
-  .code-box p{margin:6px 0 0; font-size:13px; color:var(--plum-soft);}
+  .code-box p{margin:10px 0 0; font-size:13px; color:var(--plum-soft);}
+  #qrWrap{display:none; background:white; border-radius:14px; padding:12px; display:inline-block;}
+  #qrWrap canvas{display:block; border-radius:8px;}
 
   .retrieve-form{display:flex; gap:10px; width:100%; margin-top:16px;}
-  .retrieve-form input{flex:1; padding:14px; border-radius:14px; border:2px solid var(--pink); font-size:20px; text-align:center; letter-spacing:4px; font-family:'Fraunces',serif;}
+  .retrieve-form input{flex:1; padding:14px; border-radius:14px; border:2px solid var(--pink); font-size:14px; text-align:center; font-family:'Quicksand',sans-serif;}
 
   .top-nav{display:flex; justify-content:space-between; width:100%; max-width:640px; margin-bottom:10px;}
   .link-btn{background:none; border:none; color:var(--plum-soft); font-family:'Quicksand'; font-weight:600; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:4px;}
@@ -291,8 +292,8 @@
     </div>
 
     <div class="code-box" id="codeBox" style="display:none;">
-      <div class="code" id="sessionCode">— — — —</div>
-      <p>Buka link photobooth ini di HP kamu, ketuk "Ambil di HP" lalu masukkan kode ini. Kode berlaku sekitar 30 menit.</p>
+      <div id="qrWrap"><canvas id="qrCanvas"></canvas></div>
+      <p id="codeBoxText">Menyiapkan koneksi…</p>
     </div>
 
     <div class="btn-row">
@@ -301,17 +302,26 @@
   </div>
 </div>
 
-<!-- RETRIEVE ON PHONE -->
+<!-- RETRIEVE ON PHONE (manual fallback, tanpa scan) -->
 <div class="screen" id="screen-retrieve">
   <div class="card" style="text-align:center;">
     <h2>Ambil foto di HP</h2>
-    <p class="lead">Masukkan kode 4 digit yang muncul di layar photobooth.</p>
+    <p class="lead">Cara termudah: scan QR yang muncul di layar photobooth langsung pakai kamera HP. Kalau tidak bisa scan, tempel kode sambungan di bawah ini.</p>
     <div class="retrieve-form">
-      <input type="text" id="retrieveCodeInput" maxlength="4" placeholder="0000">
+      <input type="text" id="retrieveCodeInput" placeholder="tempel kode sambungan di sini">
       <button class="btn btn-primary" id="retrieveGoBtn">Ambil</button>
     </div>
     <div id="retrieveResult" style="margin-top:18px;"></div>
     <div class="status-msg" id="retrieveStatus"></div>
+  </div>
+</div>
+
+<!-- RECEIVE VIA QR SCAN -->
+<div class="screen" id="screen-receive">
+  <div class="card" style="text-align:center;">
+    <h2>Mengambil fotomu… ✿</h2>
+    <p class="lead" id="receiveStatus">Menyambungkan ke photobooth…</p>
+    <div id="receiveResult"></div>
   </div>
 </div>
 
@@ -327,7 +337,9 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
 /* ===================== STATE ===================== */
 const state = {
@@ -344,6 +356,7 @@ const state = {
   selectedFrame: null,
   pendingShot: null,
   sortable: null,
+  hostPeer: null,
 };
 
 /* ===================== NAV ===================== */
@@ -448,7 +461,6 @@ document.getElementById('shutterBtn').onclick = ()=>{
   if(!w||!h){ setCamStatus('Kamera belum siap, tunggu sebentar ya.'); return; }
   canvas.width=w; canvas.height=h;
   const ctx = canvas.getContext('2d');
-  // mirror for a natural selfie feel when using builtin webcam
   if(state.camSource==='builtin'){
     ctx.translate(w,0); ctx.scale(-1,1);
   }
@@ -506,7 +518,6 @@ function buildFrameGallery(){
     el.className='frame-thumb'+(state.selectedFrame&&state.selectedFrame.id===f.id?' selected':'');
     if(f.builtin){
       el.style.background = `linear-gradient(160deg, ${f.color}, white)`;
-      el.style.border3='none';
       el.innerHTML = `<div style="font-size:22px;">${f.emoji}</div><span class="label">${f.name}</span>`;
     } else {
       el.style.backgroundImage = `url(${f.dataUrl})`;
@@ -585,7 +596,6 @@ function renderFinalCanvas(){
   canvas.width = W; canvas.height = H;
 
   const f = state.selectedFrame || state.frames[0];
-  // background
   if(f.builtin){
     const grad = ctx.createLinearGradient(0,0,0,H);
     grad.addColorStop(0, f.color); grad.addColorStop(1,'#ffffff');
@@ -606,7 +616,6 @@ function renderFinalCanvas(){
     const im = new Image();
     im.onload = ()=>{
       const py = positions[slotI];
-      // cover-fit draw
       const scale = Math.max(photoW/im.width, photoH/im.height);
       const dw = im.width*scale, dh = im.height*scale;
       const dx = PAD + (photoW-dw)/2, dy = py + (photoH-dh)/2;
@@ -621,7 +630,6 @@ function renderFinalCanvas(){
 
       loaded++;
       if(loaded===total){
-        // custom frame overlay (assumes transparent PNG same aspect as strip)
         if(!f.builtin && f.dataUrl){
           const overlay = new Image();
           overlay.onload = ()=>{ ctx.drawImage(overlay,0,0,W,H); finishCanvasFooter(ctx,W,H,f); };
@@ -670,54 +678,104 @@ document.getElementById('printBtn').onclick = ()=>{
 document.getElementById('newSessionBtn').onclick = ()=>{
   state.photos=[]; state.order=[0,1,2,3]; state.selectedFrame=null;
   document.getElementById('codeBox').style.display='none';
+  document.getElementById('qrWrap').style.display='none';
+  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; }
   showScreen('screen-start');
 };
 
-/* ---- send to phone via shared persistent storage ---- */
+/* ===================== KIRIM KE HP (QR + WebRTC, tanpa server) ===================== */
+/*
+  Cara kerja: laptop/iPad membuat koneksi P2P (PeerJS, memakai broker gratis
+  bawaan PeerJS hanya untuk "kenalan" awal — file foto TIDAK pernah lewat
+  server manapun, langsung dari perangkat ke perangkat).
+  QR berisi link ke halaman ini sendiri + id koneksi. HP scan -> otomatis
+  connect -> foto diterima -> tombol simpan muncul.
+*/
 document.getElementById('sendPhoneBtn').onclick = async ()=>{
   const canvas = document.getElementById('finalCanvas');
-  const dataUrl = canvas.toDataURL('image/jpeg',0.9);
-  const code = String(Math.floor(1000+Math.random()*9000));
-  try{
-    const res = await window.storage.set('photobooth-session:'+code, JSON.stringify({img:dataUrl, ts:Date.now()}), true);
-    if(res){
-      document.getElementById('sessionCode').textContent = code.split('').join(' ');
-      document.getElementById('codeBox').style.display='block';
-    } else {
-      alert('Gagal membuat kode, coba lagi ya.');
-    }
-  }catch(e){
-    alert('Gagal menyimpan sesi: '+e.message);
-  }
+  const dataUrl = canvas.toDataURL('image/jpeg',0.85);
+
+  document.getElementById('codeBox').style.display='block';
+  document.getElementById('qrWrap').style.display='none';
+  document.getElementById('codeBoxText').textContent = 'Menyiapkan koneksi…';
+
+  if(state.hostPeer){ state.hostPeer.destroy(); }
+  const peer = new Peer();
+  state.hostPeer = peer;
+
+  peer.on('open', (id)=>{
+    const receiveUrl = location.origin + location.pathname + '?receive=' + id;
+    const qrCanvas = document.getElementById('qrCanvas');
+    document.getElementById('qrWrap').style.display='inline-block';
+    QRCode.toCanvas(qrCanvas, receiveUrl, {width:180, margin:1, color:{dark:'#5B4B66', light:'#ffffff'}}, (err)=>{
+      if(err) console.error(err);
+    });
+    document.getElementById('codeBoxText').innerHTML =
+      'Scan QR ini pakai <b>kamera HP</b> kamu.<br>Pastikan HP &amp; perangkat ini sama-sama terhubung internet.<br>'+
+      '<span style="font-size:11px; word-break:break-all;">Kode manual: '+id+'</span>';
+  });
+
+  peer.on('connection', (conn)=>{
+    conn.on('open', ()=>{
+      conn.send(dataUrl);
+      document.getElementById('codeBoxText').textContent = 'Tersambung! Foto sedang dikirim ke HP…';
+      setTimeout(()=>{ document.getElementById('codeBoxText').textContent = 'Terkirim! Cek HP kamu untuk simpan foto ✿'; }, 800);
+    });
+  });
+
+  peer.on('error', (err)=>{
+    document.getElementById('codeBoxText').textContent = 'Gagal membuat koneksi ('+err.type+'). Coba lagi ya.';
+  });
 };
 
-/* ===================== RETRIEVE SCREEN ===================== */
-document.getElementById('retrieveGoBtn').onclick = async ()=>{
+/* ===================== TERIMA FOTO DI HP ===================== */
+function connectToHost(hostId, statusElId, resultElId){
+  const statusEl = document.getElementById(statusElId);
+  const resultEl = document.getElementById(resultElId);
+  statusEl.textContent = 'Menyambungkan ke photobooth…';
+  const peer = new Peer();
+  peer.on('open', ()=>{
+    const conn = peer.connect(hostId, {reliable:true});
+    conn.on('open', ()=>{
+      statusEl.textContent = 'Tersambung! Menunggu foto…';
+    });
+    conn.on('data', (data)=>{
+      statusEl.textContent = 'Foto diterima! ✿';
+      resultEl.innerHTML='';
+      const img = document.createElement('img');
+      img.src = data;
+      img.style.cssText='max-width:240px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;';
+      const br = document.createElement('br');
+      const dl = document.createElement('a');
+      dl.href = data; dl.download = 'petal-booth.jpg';
+      dl.className = 'btn btn-primary';
+      dl.textContent = '⬇ Simpan ke HP';
+      dl.style.cssText = 'display:inline-block; margin-top:14px; text-decoration:none;';
+      resultEl.appendChild(img); resultEl.appendChild(br); resultEl.appendChild(dl);
+    });
+    conn.on('error', (err)=>{ statusEl.textContent = 'Gagal tersambung: '+err; });
+  });
+  peer.on('error', (err)=>{ statusEl.textContent = 'Gagal tersambung ('+err.type+'). Pastikan kode benar & photobooth masih terbuka.'; });
+}
+
+document.getElementById('retrieveGoBtn').onclick = ()=>{
   const code = document.getElementById('retrieveCodeInput').value.trim();
-  const statusEl = document.getElementById('retrieveStatus');
-  const resultEl = document.getElementById('retrieveResult');
-  resultEl.innerHTML=''; statusEl.textContent='';
-  if(code.length!==4){ statusEl.textContent='Masukkan 4 digit kode ya.'; return; }
-  statusEl.textContent='Mencari foto…';
-  try{
-    const res = await window.storage.get('photobooth-session:'+code, true);
-    if(!res){ statusEl.textContent='Kode tidak ditemukan atau sudah kedaluwarsa.'; return; }
-    const data = JSON.parse(res.value);
-    statusEl.textContent='';
-    resultEl.innerHTML = `<img src="${data.img}" style="max-width:220px; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;"><br><br>`;
-    const dl = document.createElement('a');
-    dl.href = data.img; dl.download = 'petal-booth.jpg';
-    dl.className='btn btn-primary';
-    dl.textContent='⬇ Simpan ke HP';
-    dl.style.display='inline-block';
-    resultEl.appendChild(dl);
-  }catch(e){
-    statusEl.textContent='Kode tidak ditemukan atau sudah kedaluwarsa.';
-  }
+  if(!code){ document.getElementById('retrieveStatus').textContent='Isi kode sambungan dulu ya.'; return; }
+  connectToHost(code, 'retrieveStatus', 'retrieveResult');
 };
+
+/* auto-connect kalau dibuka lewat scan QR (?receive=ID) */
+function tryAutoReceive(){
+  const params = new URLSearchParams(location.search);
+  const hostId = params.get('receive');
+  if(!hostId) return;
+  showScreen('screen-receive');
+  connectToHost(hostId, 'receiveStatus', 'receiveResult');
+}
 
 /* init */
 highlightOpt('optBuiltin');
+tryAutoReceive();
 </script>
 </body>
 </html>
