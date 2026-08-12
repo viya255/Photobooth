@@ -771,8 +771,9 @@ function buildManageFrameGallery(){
   uploadTile.onclick=()=>document.getElementById('frameUpload').click();
   gal.appendChild(uploadTile);
 
+  const currentLayout = getDynamicLayout(state.maxPhotos);
   document.getElementById('frameSizeNote').innerHTML =
-    `Ukuran frame custom: <b>${LAYOUT.W} × ${LAYOUT.H}px</b>, PNG transparan.`;
+  `Ukuran frame custom (6x15 HD): <b>${currentLayout.W} × ${currentLayout.H}px</b>, PNG transparan.`;
 }
 document.getElementById('frameUpload').onchange=(e)=>{
   const file=e.target.files[0]; if(!file) return;
