@@ -688,13 +688,18 @@ document.getElementById('keepBtn').onclick=()=>{
   renderShotsRow();
   document.getElementById('reviewOverlay').classList.remove('show');
   state.pendingShot=null;
-  if(state.photos.length>=4){
-    setCamStatus('4 foto tersimpan! Menuju pilih frame ✿');
+  if(state.photos.length >= state.maxPhotos){
+    setCamStatus(state.maxPhotos + ' foto tersimpan! Menuju pilih frame ✿');
     stopCamera();
     if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
-    setTimeout(()=>{ state.order=[0,1,2,3]; buildFrameGallery(); buildStripPreview(); showScreen('screen-frame'); },500);
+    setTimeout(()=>{ 
+      state.order = Array.from({length: state.maxPhotos}, (_, i) => i);
+      buildFrameGallery(); 
+      buildStripPreview(); 
+      showScreen('screen-frame'); 
+    },500);
   } else {
-    setCamStatus((4-state.photos.length)+' foto lagi ya!');
+    setCamStatus((state.maxPhotos - state.photos.length)+' foto lagi ya!');
   }
 };
 function renderShotsRow(){
@@ -819,7 +824,11 @@ function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
     const canvas=document.getElementById('finalCanvas');
     const ctx=canvas.getContext('2d');
-    const {W,H,PAD,photoW,photoH,positions}=LAYOUT;
+    
+    // AMBIL LAYOUT DINAMIS SESUAI JUMLAH FOTO
+    const layout = getDynamicLayout(state.photos.length);
+    const {W,H,PAD,photoW,photoH,positions} = layout;
+    
     canvas.width=W; canvas.height=H;
     const f=state.selectedFrame||state.frames[0];
 
@@ -832,7 +841,7 @@ function renderFinalCanvas(){
       ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
     }
 
-    let loaded=0; const total=4; let failed=false;
+    let loaded=0; const total=state.photos.length; let failed=false;
     state.order.forEach((photoIdx, slotI)=>{
       const im=new Image();
       im.onload=()=>{
