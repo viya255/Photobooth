@@ -131,7 +131,7 @@
   .free-photo-layer {
     position: absolute;
     inset: 0;
-    z-index: 1; /* Foto diletakkan DI BELAKANG frame */
+    z-index: 1; /* Foto diletakkan di BELAKANG frame */
     touch-action: none;
   }
 
@@ -157,8 +157,8 @@
 
   .placed-photo .photo-del-btn {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: -8px;
+    right: -8px;
     width: 22px;
     height: 22px;
     border-radius: 50%;
@@ -170,12 +170,37 @@
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 20;
+    z-index: 30;
     pointer-events: auto;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+
+  /* Handle Resizer di Ujung Kanan Bawah Foto */
+  .placed-photo .photo-resize-handle {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--pink-deep);
+    color: white;
+    border: 2px solid white;
+    font-size: 12px;
+    cursor: nwse-resize;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    pointer-events: auto;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    touch-action: none;
   }
 
   .placed-photo:hover .photo-del-btn,
-  .placed-photo.selected .photo-del-btn {
+  .placed-photo.selected .photo-del-btn,
+  .placed-photo:hover .photo-resize-handle,
+  .placed-photo.selected .photo-resize-handle {
     display: flex;
   }
 
@@ -183,7 +208,7 @@
     outline: 2px dashed var(--pink-deep);
   }
 
-  /* Layer Frame Overlay - Frame DI DEPAN foto (z-index: 10) dengan pointer-events: none agar klik tembus ke foto */
+  /* Frame Overlay di ATAS Foto (z-index: 10) */
   .strip-preview .frame-overlay-img {
     position: absolute;
     inset: 0;
@@ -434,7 +459,7 @@
   <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
   <div class="card" style="text-align:center;">
     <h2>Selesai! Cantik sekali ✨</h2>
-    <p class="lead">Klik/sentuh foto di frame untuk menggeser. Pilih frame lain di bawah jika ingin mengganti style.</p>
+    <p class="lead">Geser tengah foto untuk memindahkan. Tarik titik merah muda ⤢ di ujung kanan bawah foto untuk memperbesar / memperkecil.</p>
 
     <!-- Editor Workspace -->
     <div class="editor-workspace">
@@ -445,12 +470,6 @@
       <div style="width:100%; max-width:380px; text-align:left;">
         <label style="font-size:12px; font-weight:700; color:var(--plum);">🖼️ Ganti Frame:</label>
         <div class="frame-mini-selector" id="editorFrameSelector"></div>
-      </div>
-      
-      <!-- Controls slider ukuran foto aktif -->
-      <div class="photo-controls" style="width:100%; max-width:380px; background:var(--cream); padding:12px 14px; border-radius:16px; border:1px solid var(--pink-deep); text-align:left;">
-        <label style="font-size:12px; font-weight:700; display:block; margin-bottom:4px;">🔍 Ukuran Foto Aktif:</label>
-        <input type="range" id="sizeSlider" min="0.4" max="2.5" step="0.05" value="1" style="width:100%;">
       </div>
     </div>
 
@@ -933,7 +952,7 @@ document.getElementById('frameUpload').onchange=(e)=>{
   e.target.value='';
 };
 
-/* EDITOR OTOMATIS PLACEMENT & GESER LANGSUNG */
+/* EDITOR OTOMATIS PLACEMENT & GESER / RESIZE UJUNG LANGSUNG */
 
 function setupEditorWorkspace(){
   placedPhotos = [];
@@ -1007,7 +1026,7 @@ function renderFreeEditor(){
     wrap.style.background = '#ffffff';
   }
 
-  // 1. LAYER FOTO DITARUH DI BAWAH (z-index: 1)
+  // 1. LAYER FOTO (DI BELAKANG FRAME, z-index: 1)
   const layer = document.createElement('div');
   layer.className = 'free-photo-layer';
 
@@ -1027,10 +1046,11 @@ function renderFreeEditor(){
     img.src = item.src;
     el.appendChild(img);
 
+    // Tombol Hapus
     const delBtn = document.createElement('button');
     delBtn.className = 'photo-del-btn';
     delBtn.textContent = '✕';
-    delBtn.title = 'Hapus dari frame';
+    delBtn.title = 'Hapus foto';
     delBtn.onclick = (ev) => {
       ev.stopPropagation();
       placedPhotos = placedPhotos.filter(x => x.id !== item.id);
@@ -1040,12 +1060,19 @@ function renderFreeEditor(){
     };
     el.appendChild(delBtn);
 
-    /* LOGIKA DRAG TERUJI KONSISTEN */
+    // Handle Resize di Ujung Kanan Bawah
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'photo-resize-handle';
+    resizeHandle.textContent = '⤢';
+    resizeHandle.title = 'Tarik untuk ubah ukuran';
+    el.appendChild(resizeHandle);
+
+    /* LOGIKA DRAG (MEMINDAHKAN FOTO) */
     let isDragging = false;
     let startX = 0, startY = 0;
 
     const onPointerDown = (e) => {
-      if(e.target.classList.contains('photo-del-btn')) return;
+      if(e.target.classList.contains('photo-del-btn') || e.target.classList.contains('photo-resize-handle')) return;
       e.preventDefault();
       
       isDragging = true;
@@ -1053,9 +1080,6 @@ function renderFreeEditor(){
       
       document.querySelectorAll('.placed-photo').forEach(node => node.classList.remove('selected'));
       el.classList.add('selected');
-      
-      const slider = document.getElementById('sizeSlider');
-      if(slider) slider.value = item.scale;
 
       const clientX = e.clientX || (e.touches && e.touches[0].clientX);
       const clientY = e.clientY || (e.touches && e.touches[0].clientY);
@@ -1078,9 +1102,7 @@ function renderFreeEditor(){
         el.style.left = item.x + 'px';
         el.style.top = item.y + 'px';
 
-        if(state.finalReady) {
-          renderFinalCanvas();
-        }
+        if(state.finalReady) renderFinalCanvas();
       };
 
       const onPointerUp = () => {
@@ -1088,14 +1110,12 @@ function renderFreeEditor(){
         isDragging = false;
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
-        window.removeEventListener('pointercancel', onPointerUp);
         window.removeEventListener('touchmove', onPointerMove);
         window.removeEventListener('touchend', onPointerUp);
       };
 
       window.addEventListener('pointermove', onPointerMove, { passive: false });
       window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('pointercancel', onPointerUp);
       window.addEventListener('touchmove', onPointerMove, { passive: false });
       window.addEventListener('touchend', onPointerUp);
     };
@@ -1103,12 +1123,69 @@ function renderFreeEditor(){
     el.addEventListener('pointerdown', onPointerDown);
     el.addEventListener('touchstart', onPointerDown, { passive: false });
 
+    /* LOGIKA RESIZE DARI UJUNG (ZOOM LANGSUNG) */
+    let isResizing = false;
+    let startResizeX = 0, initialScale = 1.0;
+
+    const onResizeDown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      isResizing = true;
+      selectedPlacedPhotoId = item.id;
+      
+      document.querySelectorAll('.placed-photo').forEach(node => node.classList.remove('selected'));
+      el.classList.add('selected');
+
+      startResizeX = e.clientX || (e.touches && e.touches[0].clientX);
+      initialScale = item.scale;
+
+      const onResizeMove = (moveEv) => {
+        if (!isResizing) return;
+        moveEv.preventDefault();
+
+        const curX = moveEv.clientX || (moveEv.touches && moveEv.touches[0].clientX);
+        if (curX === undefined) return;
+
+        const diffX = curX - startResizeX;
+        // Sensitivitas resize
+        let newScale = initialScale + (diffX / 100);
+        newScale = Math.max(0.4, Math.min(2.5, newScale));
+
+        item.scale = newScale;
+
+        const updatedW = item.w * item.scale;
+        const updatedH = item.h * item.scale;
+        el.style.width = updatedW + 'px';
+        el.style.height = updatedH + 'px';
+
+        if(state.finalReady) renderFinalCanvas();
+      };
+
+      const onResizeUp = () => {
+        if (!isResizing) return;
+        isResizing = false;
+        window.removeEventListener('pointermove', onResizeMove);
+        window.removeEventListener('pointerup', onResizeUp);
+        window.removeEventListener('touchmove', onResizeMove);
+        window.removeEventListener('touchend', onResizeUp);
+      };
+
+      window.addEventListener('pointermove', onResizeMove, { passive: false });
+      window.addEventListener('pointerup', onResizeUp);
+      window.addEventListener('touchmove', onResizeMove, { passive: false });
+      window.addEventListener('touchend', onResizeUp);
+    };
+
+    resizeHandle.addEventListener('pointerdown', onResizeDown);
+    resizeHandle.addEventListener('touchstart', onResizeDown, { passive: false });
+
     layer.appendChild(el);
   });
 
   wrap.appendChild(layer);
 
-  // 2. LAYER FRAME OVERLAY DITARUH DI ATAS FOTO (z-index: 10) DENGAN pointer-events: none
+  // 2. LAYER FRAME OVERLAY DI ATAS FOTO (z-index: 10, pointer-events: none)
   if (!f.builtin && f.dataUrl) {
     const frameOverlay = document.createElement('img');
     frameOverlay.className = 'frame-overlay-img';
@@ -1125,17 +1202,6 @@ function renderFreeEditor(){
     renderFinalCanvas();
   }
 }
-
-document.getElementById('sizeSlider').oninput = (e) => {
-  const newScale = parseFloat(e.target.value);
-  if(selectedPlacedPhotoId) {
-    const target = placedPhotos.find(x => x.id === selectedPlacedPhotoId);
-    if(target) {
-      target.scale = newScale;
-      renderFreeEditor();
-    }
-  }
-};
 
 document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
@@ -1547,7 +1613,7 @@ function renderHistoryFull(){
     const dl=document.createElement('button'); dl.textContent='⬇'; dl.title='Unduh';
     dl.onclick=()=>downloadHistoryItem(item);
     const del=document.createElement('button'); del.className='del'; del.textContent='✕'; del.title='Hapus';
-    del.onclick=()=>removeFromHistory(item.id);
+    del.onclick=()=>removeFromHistory(item);
     actions.appendChild(dl); actions.appendChild(del);
     row.appendChild(img); row.appendChild(meta); row.appendChild(actions);
     wrap.appendChild(row);
