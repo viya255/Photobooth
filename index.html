@@ -107,7 +107,7 @@
   .upload-frame-tile{border:2px dashed var(--pink-deep); border-radius:16px; aspect-ratio:2/5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--pink-deep); font-size:12px; font-weight:700; background:var(--pink);}
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   .strip-editor{display:flex; gap:24px; width:100%; margin-top:22px; flex-wrap:wrap; justify-content:center;}
-  .strip-preview{
+  .strip-preview {
   width: 160px; 
   aspect-ratio: 2/5; 
   border-radius: 14px; 
@@ -116,20 +116,25 @@
   box-shadow: var(--shadow); 
   background: #ffffff;
 }
-.strip-preview .slot{
+
+/* Foto ditaruh di bawah overlay */
+.strip-preview .slot {
   position: absolute; 
   border-radius: 4px; 
   overflow: hidden; 
   cursor: grab; 
   z-index: 1;
 }
-.strip-preview .slot img{
+
+.strip-preview .slot img {
   width: 100%; 
   height: 100%; 
   object-fit: cover; 
   display: block;
 }
-.strip-preview::after{
+
+/* Overlay frame custom di atas foto */
+.strip-preview::after {
   content: ""; 
   position: absolute; 
   inset: 0; 
@@ -761,21 +766,32 @@ document.getElementById('backToCaptureBtn').onclick=()=>{ showScreen('screen-cap
 
 /* ===================== FRAME SCREEN ===================== */
 function buildFrameGallery(){
-  const gal=document.getElementById('frameGallery'); gal.innerHTML='';
-  state.frames.forEach(f=>{
-    const el=document.createElement('div');
-    el.className='frame-thumb'+(state.selectedFrame&&state.selectedFrame.id===f.id?' selected':'');
-    if(f.builtin){
-      el.style.background=`linear-gradient(160deg, ${f.color}, white)`;
-      el.innerHTML=`<div style="font-size:22px;">${f.emoji}</div><span class="label">${f.name}</span>`;
+  const gal = document.getElementById('frameGallery'); 
+  gal.innerHTML = '';
+  
+  state.frames.forEach(f => {
+    const el = document.createElement('div');
+    el.className = 'frame-thumb' + (state.selectedFrame && state.selectedFrame.id === f.id ? ' selected' : '');
+    
+    if (f.builtin) {
+      el.style.background = `linear-gradient(160deg, ${f.color}, white)`;
+      el.innerHTML = `<div style="font-size:22px;">${f.emoji}</div><span class="label">${f.name}</span>`;
     } else {
-      el.style.backgroundImage=`url(${f.dataUrl})`; el.style.backgroundSize='cover';
-      el.innerHTML=`<span class="label">${f.name}</span>`;
+      el.style.backgroundImage = `url(${f.dataUrl})`; 
+      el.style.backgroundSize = 'cover';
+      el.innerHTML = `<span class="label">${f.name}</span>`;
     }
-    el.onclick=()=>{ state.selectedFrame=f; buildFrameGallery(); buildStripPreview(); };
+
+    // Saat frame diklik, update frame terpilih & panggil ulang preview
+    el.onclick = () => { 
+      state.selectedFrame = f; 
+      buildFrameGallery(); 
+      buildStripPreview(); 
+    };
     gal.appendChild(el);
   });
-  if(!state.selectedFrame) state.selectedFrame=state.frames[0];
+
+  if (!state.selectedFrame) state.selectedFrame = state.frames[0];
 }
 
 /* ===================== KELOLA FRAME ===================== */
@@ -838,6 +854,7 @@ function buildStripPreview(){
     wrap.style.setProperty('--frame-overlay', 'none');
   } else {
     wrap.style.background = '#ffffff';
+    // Memasang gambar frame custom sebagai overlay di atas
     wrap.style.setProperty('--frame-overlay', `url(${f.dataUrl})`);
   }
 
@@ -850,7 +867,7 @@ function buildStripPreview(){
     slot.className = 'slot'; 
     slot.dataset.photoIdx = photoIdx;
 
-    // Menghitung posisi persentase agar sama dengan canvas akhir
+    // Menempatkan foto persis di dalam kotak lubang frame
     slot.style.left = (pos.x / layout.W * 100) + '%';
     slot.style.top = (pos.y / layout.H * 100) + '%';
     slot.style.width = (pos.w / layout.W * 100) + '%';
