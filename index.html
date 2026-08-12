@@ -502,9 +502,18 @@ async function startBuiltinCamera(){
   document.getElementById('shutterBtn').disabled=true;
   try{
     stopCamera();
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}, audio:false});
+    // Minta resolusi tinggi (Full HD 1080p / 4K ideal)
+    const constraints = {
+      video: {
+        facingMode: 'user',
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     state.stream=stream; videoEl.srcObject=stream;
-    setCamStatus('Kamera siap! Ketuk tombol jepret ya ✿');
+    setCamStatus('Kamera HD siap! Ketuk tombol jepret ya ✿');
     document.getElementById('shutterBtn').disabled=false;
     updateMirrorUI();
   }catch(err){
@@ -569,13 +578,21 @@ function startPhoneCameraPairing(){
 
 document.getElementById('shutterBtn').onclick=()=>{
   if(state.photos.length>=4) return;
-  const w=videoEl.videoWidth, h=videoEl.videoHeight;
+  // Mengambil ukuran fisik asli (native resolution) dari video stream
+  const w = videoEl.videoWidth, h = videoEl.videoHeight;
   if(!w||!h){ setCamStatus('Kamera belum siap, tunggu sebentar ya.', true); return; }
-  const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+  
+  const canvas=document.createElement('canvas'); 
+  canvas.width=w; 
+  canvas.height=h;
   const ctx=canvas.getContext('2d');
+  
+  // Efek cermin jika aktif
   if(state.mirror){ ctx.translate(w,0); ctx.scale(-1,1); }
   ctx.drawImage(videoEl,0,0,w,h);
-  const dataUrl = canvas.toDataURL('image/jpeg',0.92);
+  
+  // Gunakan PNG agar gambar tidak terkompresi / pecah
+  const dataUrl = canvas.toDataURL('image/png');
   state.pendingShot = dataUrl;
 
   const flash=document.getElementById('camFlash');
