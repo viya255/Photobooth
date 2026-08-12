@@ -576,30 +576,65 @@ function startPhoneCameraPairing(){
   });
 }
 
-document.getElementById('shutterBtn').onclick=()=>{
-  if(state.photos.length>=4) return;
-  // Mengambil ukuran fisik asli (native resolution) dari video stream
+let isCountingDown = false;
+
+document.getElementById('shutterBtn').onclick = () => {
+  if (state.photos.length >= 4 || isCountingDown) return;
+
   const w = videoEl.videoWidth, h = videoEl.videoHeight;
-  if(!w||!h){ setCamStatus('Kamera belum siap, tunggu sebentar ya.', true); return; }
+  if (!w || !h) { 
+    setCamStatus('Kamera belum siap, tunggu sebentar ya.', true); 
+    return; 
+  }
+
+  const shutterBtn = document.getElementById('shutterBtn');
+  const overlay = document.getElementById('countdownOverlay');
   
-  const canvas=document.createElement('canvas'); 
-  canvas.width=w; 
-  canvas.height=h;
-  const ctx=canvas.getContext('2d');
+  isCountingDown = true;
+  shutterBtn.disabled = true;
+  overlay.style.display = 'block';
+
+  let count = 3;
+  overlay.textContent = count;
+
+  const timer = setInterval(() => {
+    count--;
+    if (count > 0) {
+      overlay.textContent = count;
+    } else {
+      clearInterval(timer);
+      overlay.style.display = 'none';
+      isCountingDown = false;
+      
+      takePhoto(w, h);
+    }
+  }, 1000);
+};
+
+function takePhoto(w, h) {
+  const canvas = document.createElement('canvas'); 
+  canvas.width = w; 
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
   
-  // Efek cermin jika aktif
-  if(state.mirror){ ctx.translate(w,0); ctx.scale(-1,1); }
-  ctx.drawImage(videoEl,0,0,w,h);
+  if (state.mirror) { 
+    ctx.translate(w, 0); 
+    ctx.scale(-1, 1); 
+  }
+  ctx.drawImage(videoEl, 0, 0, w, h);
   
-  // Gunakan PNG agar gambar tidak terkompresi / pecah
   const dataUrl = canvas.toDataURL('image/png');
   state.pendingShot = dataUrl;
 
-  const flash=document.getElementById('camFlash');
-  flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash');
-  document.getElementById('reviewImg').src=dataUrl;
+  const flash = document.getElementById('camFlash');
+  flash.classList.remove('flash'); 
+  void flash.offsetWidth; 
+  flash.classList.add('flash');
+  
+  document.getElementById('reviewImg').src = dataUrl;
   document.getElementById('reviewOverlay').classList.add('show');
-};
+  document.getElementById('shutterBtn').disabled = false;
+}
 document.getElementById('retakeBtn').onclick=()=>{ document.getElementById('reviewOverlay').classList.remove('show'); state.pendingShot=null; };
 document.getElementById('keepBtn').onclick=()=>{
   state.photos.push(state.pendingShot);
