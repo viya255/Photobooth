@@ -954,17 +954,16 @@ document.getElementById('zoomSlider').oninput = (e) => {
 };
   
 // Variable Global Offset Foto
+/* ===================== FINAL CANVAS & LAYAR AKHIR ===================== */
 let photoOffsets = [];
 let currentZoom = 1;
 
-// 1. Saat berpindah ke layar Final
 document.getElementById('toFinalBtn').onclick = () => {
   showScreen('screen-final');
-  
-  // Inisialisasi offset geser foto jika belum ada
   photoOffsets = state.photos.map(() => ({ x: 0, y: 0 }));
   currentZoom = 1;
-  document.getElementById('finalZoomSlider').value = 1;
+  const zoomSlider = document.getElementById('finalZoomSlider');
+  if (zoomSlider) zoomSlider.value = 1;
 
   buildFinalInteractivePreview();
 
@@ -975,9 +974,9 @@ document.getElementById('toFinalBtn').onclick = () => {
   initHostPeer();
 };
 
-// 2. Fungsi Membuat Preview Interaktif di Layar Akhir
 function buildFinalInteractivePreview() {
   const wrap = document.getElementById('finalInteractiveWrap');
+  if (!wrap) return;
   const f = state.selectedFrame || state.frames[0];
 
   if (f.builtin) {
@@ -1005,7 +1004,6 @@ function buildFinalInteractivePreview() {
     slot.appendChild(img);
     slotContainer.appendChild(slot);
 
-    // Event Dragging (Mouse & Touch)
     let isDragging = false, startX = 0, startY = 0;
 
     slot.addEventListener('pointerdown', (e) => {
@@ -1032,13 +1030,45 @@ function buildFinalInteractivePreview() {
   wrap.appendChild(slotContainer);
 }
 
-// Handler Slider Zoom
-document.getElementById('finalZoomSlider').oninput = (e) => {
-  currentZoom = parseFloat(e.target.value);
-  buildFinalInteractivePreview();
-};
+const finalZoomEl = document.getElementById('finalZoomSlider');
+if (finalZoomEl) {
+  finalZoomEl.oninput = (e) => {
+    currentZoom = parseFloat(e.target.value);
+    buildFinalInteractivePreview();
+  };
+}
 
-// 3. Render ke Canvas HD Mengikuti Hasil Geseran Pengguna
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function finishCanvasFooter(ctx, W, H, f) {
+  ctx.fillStyle = f.accent || '#E9A6BC';
+  ctx.font = "italic 58px 'Fraunces', serif";
+  ctx.textAlign = 'center';
+  ctx.fillText('✿ Petal Booth ✿', W / 2, H - 70);
+  ctx.font = "30px 'Quicksand', sans-serif";
+  ctx.fillStyle = '#8A7594';
+  const dateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  ctx.fillText(dateStr, W / 2, H - 24);
+}
+
+function safeDataUrl() {
+  const canvas = document.getElementById('finalCanvas');
+  try {
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    alert('Gagal memproses gambar.');
+    return null;
+  }
+}
+
 function renderFinalCanvas() {
   return new Promise((resolve, reject) => {
     const canvas = document.getElementById('finalCanvas');
@@ -1054,7 +1084,6 @@ function renderFinalCanvas() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
-    // Rasio Skala dari Preview Layar (220px) ke Canvas HD (1200px)
     const previewEl = document.getElementById('finalInteractiveWrap');
     const previewW = previewEl ? previewEl.clientWidth : 220;
     const scaleFactor = W / previewW;
@@ -1075,7 +1104,6 @@ function renderFinalCanvas() {
         const dw = im.width * scale;
         const dh = im.height * scale;
 
-        // Hitung pergeseran posisi sesuai hasil drag pengguna
         const dx = px + (pw - dw) / 2 + (offset.x * scaleFactor);
         const dy = py + (ph - dh) / 2 + (offset.y * scaleFactor);
 
@@ -1108,7 +1136,6 @@ function renderFinalCanvas() {
   });
 }
 
-// 4. Update Handler Tombol Aksi untuk Memanggil Canvas Terlebih Dahulu
 document.getElementById('downloadBtn').onclick = async () => {
   await renderFinalCanvas();
   const dataUrl = safeDataUrl(); 
@@ -1126,6 +1153,324 @@ document.getElementById('printBtn').onclick = async () => {
   document.getElementById('printImg').src = dataUrl;
   setTimeout(() => window.print(), 120);
 };
+
+document.getElementById('newSessionBtn').onclick = () => {
+  state.photos = [];
+  state.order = Array.from({ length: state.maxPhotos }, (_, i) => i);
+  state.selectedFrame = null;
+  document.getElementById('codeBox').style.display = 'none';
+  document.getElementById('qrWrap').style.display = 'none';
+  if (state.hostPeer) {
+    state.hostPeer.destroy();
+    state.hostPeer = null;
+    state.hostPeerId = null;
+  }
+  showScreen('screen-start');
+};
+
+/* ===================== KIRIM FOTO KE HP PELANGGAN ===================== */
+function showSendReady(){
+  document.getElementById('qrWrap').style.display='inline-block';
+  document.getElementById('codeBoxText').innerHTML =
+    'Scan QR ini pakai <b>kamera HP pelanggan</b>.<br>Foto akan otomatis dikirim dan bisa diunduh langsung.<br>'+
+    '<span style="font-size:11px; word-break:break-all;">Kode manual: '+state.hostPeerId+'</span>';
+  document.getElementById('sendPhoneBtn').disabled=false;
+  document.getElementById('sendRetryRow').style.display='none';
+}
+function initHostPeer(){
+  if(state.hostPeer) return;
+  const peer=new Peer();
+  state.hostPeer=peer;
+  let opened=false;
+
+  const timeoutId=setTimeout(()=>{
+    if(!opened && document.getElementById('codeBox').style.display==='block'){
+      document.getElementById('codeBoxText').innerHTML =
+        'Koneksi ke server QR lambat/gagal. Coba tekan Coba Lagi.';
+      document.getElementById('sendRetryRow').style.display='flex';
+      document.getElementById('sendPhoneBtn').disabled=false;
+    }
+  }, 9000);
+
+  peer.on('open',(id)=>{
+    opened=true; clearTimeout(timeoutId);
+    state.hostPeerId=id;
+    const baseUrl = location.protocol.startsWith('file') ? 'https://petal-booth.vercel.app' : (location.origin + location.pathname);
+    const receiveUrl=baseUrl+'?receive='+id;
+    const qrImgEl=document.getElementById('qrImg');
+    qrImgEl.src = qrImageUrl(receiveUrl, 180);
+    if(document.getElementById('codeBox').style.display==='block'){ showSendReady(); }
+  });
+  peer.on('connection',(conn)=>{
+    conn.on('open',()=>{
+      const dataUrl=safeDataUrl();
+      if(dataUrl) conn.send(dataUrl);
+      document.getElementById('codeBoxText').textContent='Tersambung! Foto sedang dikirim ke HP pelanggan…';
+      setTimeout(()=>{ document.getElementById('codeBoxText').textContent='Terkirim! Cek HP kamu untuk simpan foto ✿'; },800);
+    });
+  });
+  peer.on('error',(err)=>{
+    opened=true; clearTimeout(timeoutId);
+    state.hostPeer=null; state.hostPeerId=null;
+    if(document.getElementById('codeBox').style.display==='block'){
+      document.getElementById('codeBoxText').textContent='Gagal membuat koneksi ('+err.type+').';
+      document.getElementById('sendRetryRow').style.display='flex';
+      document.getElementById('sendPhoneBtn').disabled=false;
+    }
+  });
+}
+function sendToPhone(){
+  if(!state.finalReady) return;
+  const sendBtn=document.getElementById('sendPhoneBtn');
+  sendBtn.disabled=true;
+  document.getElementById('codeBox').style.display='block';
+  document.getElementById('sendRetryRow').style.display='none';
+
+  if(state.hostPeer && state.hostPeerId){ showSendReady(); return; }
+
+  document.getElementById('qrWrap').style.display='none';
+  document.getElementById('codeBoxText').textContent='Menyiapkan koneksi…';
+  if(!state.hostPeer) initHostPeer();
+}
+document.getElementById('sendPhoneBtn').onclick=sendToPhone;
+document.getElementById('sendRetryBtn').onclick=()=>{
+  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
+  sendToPhone();
+};
+
+/* ===================== TERIMA FOTO DI HP PELANGGAN ===================== */
+function connectToHost(hostId, statusElId, resultElId){
+  const statusEl=document.getElementById(statusElId), resultEl=document.getElementById(resultElId);
+  statusEl.textContent='Menyambungkan ke photobooth…'; statusEl.classList.remove('error');
+  const peer=new Peer();
+  peer.on('open',()=>{
+    const conn=peer.connect(hostId,{reliable:true});
+    conn.on('open',()=>{ statusEl.textContent='Tersambung! Menunggu foto…'; });
+    conn.on('data',(data)=>{
+      statusEl.textContent='Foto berhasil diterima! ✿'; resultEl.innerHTML='';
+      const img=document.createElement('img');
+      img.src=data; img.style.cssText='max-width:260px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;';
+      const dl=document.createElement('a');
+      dl.href=data; dl.download='petal-booth.jpg'; dl.className='btn btn-primary';
+      dl.textContent='⬇ Simpan / Unduh Foto'; dl.style.cssText='display:inline-block; margin-top:14px; text-decoration:none;';
+      resultEl.appendChild(img); resultEl.appendChild(document.createElement('br')); resultEl.appendChild(dl);
+    });
+    conn.on('error',(err)=>{ statusEl.textContent='Gagal tersambung: '+err; statusEl.classList.add('error'); });
+  });
+  peer.on('error',(err)=>{
+    statusEl.textContent='Gagal tersambung ('+err.type+'). Pastikan kode benar & layar photobooth masih terbuka.';
+    statusEl.classList.add('error');
+  });
+}
+document.getElementById('retrieveGoBtn').onclick=()=>{
+  const code=document.getElementById('retrieveCodeInput').value.trim();
+  if(!code){ document.getElementById('retrieveStatus').textContent='Isi kode sambungan dulu ya.'; return; }
+  connectToHost(code,'retrieveStatus','retrieveResult');
+};
+
+document.getElementById('backToFinalBtn').onclick = () => {
+  if (state.photos.length > 0) {
+    showScreen('screen-final');
+  } else {
+    showScreen('screen-start');
+  }
+};
+
+/* ===================== JADI KAMERA HP ===================== */
+function setupBeCamera(hostId){
+  setMinimalMode(true);
+  showScreen('screen-be-camera');
+  const statusEl=document.getElementById('beCameraStatus');
+  document.getElementById('beCameraStartBtn').onclick=async ()=>{
+    document.getElementById('beCameraStartBtn').disabled=true;
+    statusEl.textContent='Meminta izin kamera…';
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+      document.getElementById('selfPreview').srcObject=stream;
+      const peer=new Peer();
+      peer.on('open',()=>{
+        statusEl.textContent='Menyambungkan ke layar photobooth…';
+        const call=peer.call(hostId, stream);
+        call.on('stream',()=>{});
+        call.on('close',()=>{ statusEl.textContent='Koneksi terputus.'; });
+        statusEl.textContent='Tersambung! Kembali lihat layar iPad/Laptop photobooth untuk mulai memotret ✿';
+      });
+      peer.on('error',(err)=>{ statusEl.textContent='Gagal tersambung ('+err.type+'). Coba muat ulang halaman ini.'; });
+    }catch(err){
+      statusEl.textContent='Tidak bisa mengakses kamera HP ('+err.name+'). Izinkan akses kamera di pengaturan browser HP kamu.';
+      document.getElementById('beCameraStartBtn').disabled=false;
+    }
+  };
+}
+
+/* ===================== RIWAYAT ===================== */
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }
+  catch(e){ return []; }
+}
+function saveHistory(){
+  try{
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0,HISTORY_MAX)));
+  }catch(e){
+    state.history = state.history.slice(0, Math.max(0, state.history.length-4));
+    try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history)); }catch(e2){}
+  }
+}
+function makeThumbnail(sourceCanvas, maxW){
+  try{
+    const scale=maxW/sourceCanvas.width;
+    const tw=maxW, th=Math.round(sourceCanvas.height*scale);
+    const tc=document.createElement('canvas'); tc.width=tw; tc.height=th;
+    tc.getContext('2d').drawImage(sourceCanvas,0,0,tw,th);
+    return tc.toDataURL('image/jpeg',0.75);
+  }catch(e){ return null; }
+}
+function addToHistory(dataUrl){
+  state.history.unshift({id:'h'+Date.now()+Math.floor(Math.random()*1000), dataUrl, time:Date.now()});
+  if(state.history.length>HISTORY_MAX) state.history.length=HISTORY_MAX;
+  saveHistory();
+  renderHistoryAll();
+}
+function removeFromHistory(id){
+  state.history=state.history.filter(x=>x.id!==id);
+  saveHistory();
+  renderHistoryAll();
+}
+function downloadHistoryItem(item){
+  const a=document.createElement('a'); a.href=item.dataUrl; a.download='petal-booth-'+item.id+'.jpg'; a.click();
+}
+function renderHistoryAll(){
+  renderHistoryScatter();
+  renderHistoryFull();
+}
+function renderHistoryScatter(){
+  const leftEl=document.getElementById('historyScatterLeft');
+  const rightEl=document.getElementById('historyScatterRight');
+  if(!leftEl||!rightEl) return;
+  leftEl.innerHTML=''; rightEl.innerHTML='';
+  const items = state.history.slice(0, 10);
+  items.forEach((item, i)=>{
+    let side = item.side === 'left' || item.side === 'right' ? item.side : (i%2===0 ? 'left':'right');
+    const container = side==='left' ? leftEl : rightEl;
+    const div=document.createElement('div'); div.className='history-item'; div.dataset.id=item.id;
+
+    if(typeof item.x === 'number' && typeof item.y === 'number'){
+      div.style.left = item.x+'px';
+      div.style.top = item.y+'px';
+      div.style.transform = 'none';
+    } else {
+      const sideIndex = Math.floor(i/2);
+      const topPct = 4 + sideIndex*21 + (i%3)*3;
+      const edgePx = 14 + ((i*29)%34);
+      const rotate = (((i*53)%17)-8);
+      div.style.top = Math.min(topPct,86)+'%';
+      div.style.left = edgePx+'px';
+      div.style.transform = `rotate(${rotate}deg)`;
+    }
+
+    const img=document.createElement('img'); img.src=item.dataUrl; img.draggable=false; img.title='Ketuk untuk unduh, tahan & geser untuk memindah';
+    const del=document.createElement('button'); del.className='hist-del'; del.textContent='✕'; del.title='Hapus dari riwayat';
+    del.onclick=(ev)=>{ ev.stopPropagation(); removeFromHistory(item.id); };
+    div.appendChild(img); div.appendChild(del);
+    container.appendChild(div);
+
+    makeHistoryItemDraggable(div, item, container);
+  });
+}
+function makeHistoryItemDraggable(el, item, container){
+  el.addEventListener('pointerdown', (ev)=>{
+    if(ev.target.classList.contains('hist-del')) return;
+    ev.preventDefault();
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const offsetX = ev.clientX - elRect.left;
+    const offsetY = ev.clientY - elRect.top;
+    let moved=false;
+    el.classList.add('dragging');
+    el.style.transform='none';
+    try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+
+    function onMove(mv){
+      moved=true;
+      let x = mv.clientX - containerRect.left - offsetX;
+      let y = mv.clientY - containerRect.top - offsetY;
+      x = Math.max(0, Math.min(x, containerRect.width - elRect.width));
+      y = Math.max(0, Math.min(y, containerRect.height - elRect.height));
+      el.style.left = x+'px';
+      el.style.top = y+'px';
+    }
+    function onUp(){
+      el.classList.remove('dragging');
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+      if(moved){
+        item.x = parseFloat(el.style.left);
+        item.y = parseFloat(el.style.top);
+        item.side = container.id==='historyScatterLeft' ? 'left' : 'right';
+        saveHistory();
+      } else {
+        downloadHistoryItem(item);
+      }
+    }
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+  });
+}
+function renderHistoryFull(){
+  const wrap=document.getElementById('historyListFull');
+  if(!wrap) return;
+  wrap.innerHTML='';
+  if(state.history.length===0){
+    wrap.innerHTML='<div class="history-empty">Belum ada foto tersimpan ✿</div>';
+    return;
+  }
+  state.history.forEach((item, idx)=>{
+    const row=document.createElement('div'); row.className='history-row';
+    const img=document.createElement('img'); img.src=item.dataUrl;
+    const meta=document.createElement('div'); meta.className='meta';
+    const d=new Date(item.time||parseInt(String(item.id).replace(/\D/g,'').slice(0,13))||Date.now());
+    const dateStr=d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+    const timeStr=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+    meta.innerHTML=`<b>Sesi Foto #${state.history.length-idx}</b><span>${dateStr} · ${timeStr}</span>`;
+    const actions=document.createElement('div'); actions.className='row-actions';
+    const dl=document.createElement('button'); dl.textContent='⬇'; dl.title='Unduh';
+    dl.onclick=()=>downloadHistoryItem(item);
+    const del=document.createElement('button'); del.className='del'; del.textContent='✕'; del.title='Hapus';
+    del.onclick=()=>removeFromHistory(item.id);
+    actions.appendChild(dl); actions.appendChild(del);
+    row.appendChild(img); row.appendChild(meta); row.appendChild(actions);
+    wrap.appendChild(row);
+  });
+}
+document.getElementById('historyNavBtn').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
+document.getElementById('historyFab').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
+document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-start'); };
+
+/* ===================== AUTO-DETECT QUERY PARAM ===================== */
+(function initFromQuery(){
+  const params=new URLSearchParams(location.search);
+  const receiveId=params.get('receive');
+  const cameraId=params.get('camera');
+  if(receiveId){
+    setMinimalMode(true);
+    showScreen('screen-receive');
+    connectToHost(receiveId,'receiveStatus','receiveResult');
+    return;
+  }
+  if(cameraId){
+    setupBeCamera(cameraId);
+    return;
+  }
+})();
+
+/* init */
+highlightOpt('optBuiltin');
+updateMirrorUI();
+state.history = loadHistory();
+renderHistoryAll();
+  
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.order=Array.from({length: state.maxPhotos}, (_, i) => i); state.selectedFrame=null;
   document.getElementById('codeBox').style.display='none';
