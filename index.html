@@ -131,7 +131,7 @@
   .free-photo-layer {
     position: absolute;
     inset: 0;
-    z-index: 10;
+    z-index: 1; /* Foto diletakkan DI BELAKANG frame */
     touch-action: none;
   }
 
@@ -140,7 +140,7 @@
     cursor: grab;
     user-select: none;
     touch-action: none;
-    z-index: 10;
+    z-index: 1;
   }
 
   .placed-photo:active {
@@ -183,7 +183,7 @@
     outline: 2px dashed var(--pink-deep);
   }
 
-  /* Layer Frame Overlay - DIBUAT PASIF */
+  /* Layer Frame Overlay - Frame DI DEPAN foto (z-index: 10) dengan pointer-events: none agar klik tembus ke foto */
   .strip-preview .frame-overlay-img {
     position: absolute;
     inset: 0;
@@ -191,7 +191,7 @@
     height: 100%;
     object-fit: fill;
     pointer-events: none !important;
-    z-index: 5;
+    z-index: 10 !important;
   }
 
   /* Mini Frame Switcher di Editor */
@@ -1007,6 +1007,7 @@ function renderFreeEditor(){
     wrap.style.background = '#ffffff';
   }
 
+  // 1. LAYER FOTO DITARUH DI BAWAH (z-index: 1)
   const layer = document.createElement('div');
   layer.className = 'free-photo-layer';
 
@@ -1039,7 +1040,7 @@ function renderFreeEditor(){
     };
     el.appendChild(delBtn);
 
-    /* LOGIKA DRAG STABIL DENGAN GLOBAL WINDOW LISTENER */
+    /* LOGIKA DRAG TERUJI KONSISTEN */
     let isDragging = false;
     let startX = 0, startY = 0;
 
@@ -1050,7 +1051,6 @@ function renderFreeEditor(){
       isDragging = true;
       selectedPlacedPhotoId = item.id;
       
-      // Update outline visual tanpa destroy DOM
       document.querySelectorAll('.placed-photo').forEach(node => node.classList.remove('selected'));
       el.classList.add('selected');
       
@@ -1106,21 +1106,20 @@ function renderFreeEditor(){
     layer.appendChild(el);
   });
 
-  // Susun elemen: Frame Overlay lebih dahulu di belakang, lalu Layer Foto
+  wrap.appendChild(layer);
+
+  // 2. LAYER FRAME OVERLAY DITARUH DI ATAS FOTO (z-index: 10) DENGAN pointer-events: none
   if (!f.builtin && f.dataUrl) {
     const frameOverlay = document.createElement('img');
     frameOverlay.className = 'frame-overlay-img';
     frameOverlay.src = f.dataUrl;
-    frameOverlay.setAttribute('style', 'pointer-events: none !important; z-index: 5;');
     wrap.appendChild(frameOverlay);
   } else if (f.builtin) {
     const cap = document.createElement('div');
     cap.textContent = '✿ Petal Booth ✿';
-    cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:5; font-family:Caveat,cursive; font-size:18px; color:'+(f.accent||'#E9A6BC')+'; pointer-events:none;';
+    cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:10; font-family:Caveat,cursive; font-size:18px; color:'+(f.accent||'#E9A6BC')+'; pointer-events:none;';
     wrap.appendChild(cap);
   }
-
-  wrap.appendChild(layer);
 
   if(state.finalReady) {
     renderFinalCanvas();
