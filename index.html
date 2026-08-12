@@ -615,7 +615,7 @@ function startPhoneCameraPairing(){
 let isCountingDown = false;
 
 document.getElementById('shutterBtn').onclick = () => {
-  if (state.photos.length >= 4 || isCountingDown) return;
+  if (state.photos.length >= state.maxPhotos || isCountingDown) return;
 
   const w = videoEl.videoWidth, h = videoEl.videoHeight;
   if (!w || !h) { 
@@ -704,7 +704,7 @@ document.getElementById('keepBtn').onclick=()=>{
 };
 function renderShotsRow(){
   const row=document.getElementById('shotsRow'); row.innerHTML='';
-  for(let i=0;i<4;i++){
+  for(let i=0; i<state.maxPhotos; i++){
     const div=document.createElement('div'); div.className='shot-slot';
     if(state.photos[i]){ const img=document.createElement('img'); img.src=state.photos[i]; div.appendChild(img); }
     else{ div.textContent=(i+1); }
@@ -822,12 +822,12 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
 /* ===================== FINAL CANVAS ===================== */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
-    const canvas=document.getElementById('finalCanvas');
-    const ctx=canvas.getContext('2d');
-    
-    // AMBIL LAYOUT DINAMIS SESUAI JUMLAH FOTO
-    const layout = getDynamicLayout(state.photos.length);
-    const {W,H,PAD,photoW,photoH,positions} = layout;
+   const canvas=document.getElementById('finalCanvas');
+   const ctx=canvas.getContext('2d');
+
+   // Memanggil layout dinamis (HD 6x15) berdasarkan jumlah foto yang diambil
+   const layout = getDynamicLayout(state.photos.length);
+   const {W,H,PAD,photoW,photoH,positions} = layout;
     
     canvas.width=W; canvas.height=H;
     const f=state.selectedFrame||state.frames[0];
@@ -909,7 +909,7 @@ document.getElementById('printBtn').onclick=()=>{
   setTimeout(()=>window.print(), 120);
 };
 document.getElementById('newSessionBtn').onclick=()=>{
-  state.photos=[]; state.order=[0,1,2,3]; state.selectedFrame=null;
+  state.photos=[]; state.order=Array.from({length: state.maxPhotos}, (_, i) => i); state.selectedFrame=null;
   document.getElementById('codeBox').style.display='none';
   document.getElementById('qrWrap').style.display='none';
   if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
