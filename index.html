@@ -108,7 +108,7 @@
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   .strip-editor{display:flex; gap:24px; width:100%; margin-top:22px; flex-wrap:wrap; justify-content:center;}
   .strip-preview {
-  width: 200px;
+  width: 220px;
   aspect-ratio: 2/5;
   border-radius: 14px;
   position: relative;
@@ -122,7 +122,7 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  z-index: 1; /* Di bawah frame */
+  z-index: 1;
 }
 
 .strip-preview .slot {
@@ -133,9 +133,11 @@
   cursor: grab;
   touch-action: none;
 }
+
 .strip-preview .slot:active {
   cursor: grabbing;
 }
+
 .strip-preview .slot img {
   width: 100%;
   height: 100%;
@@ -144,7 +146,7 @@
   user-select: none;
 }
 
-/* Gambar Frame selalu menutupi di atas foto */
+/* Overlay Frame berada di atas foto agar foto bisa digeser di celah transparan */
 .strip-preview::after {
   content: "";
   position: absolute;
@@ -152,8 +154,8 @@
   background-image: var(--frame-overlay, none);
   background-size: 100% 100%;
   background-position: center;
-  pointer-events: none; /* Klik tembus ke foto di bawahnya */
-  z-index: 10; /* Berada di atas foto */
+  pointer-events: none;
+  z-index: 10;
 }
   .editor-hint{flex:1; min-width:180px;}
   .editor-hint ul{padding-left:18px; color:var(--plum-soft); font-size:13.5px; line-height:1.8;}
@@ -373,12 +375,27 @@
 </div>
 
 <!-- FINAL -->
+<!-- FINAL -->
 <div class="screen" id="screen-final">
   <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
   <div class="card" style="text-align:center;">
     <h2>Selesai! Cantik sekali ✨</h2>
-    <p class="lead">Simpan, cetak, atau kirim ke HP kamu.</p>
-    <canvas id="finalCanvas" width="900" height="3036"></canvas>
+    <p class="lead">Atur posisi foto agar pas di kolom frame, lalu simpan atau cetak.</p>
+    
+    <!-- Container Preview Interaktif (Bisa Digeser) -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:12px; margin: 16px 0;">
+      <div id="finalInteractiveWrap" class="strip-preview" style="width: 220px; aspect-ratio: 2/5; margin:0 auto;"></div>
+      
+      <!-- Kontrol Zoom Foto -->
+      <div style="width:100%; max-width:280px; background:var(--cream); padding:10px 14px; border-radius:14px; border:1px solid var(--pink-deep);">
+        <label style="font-size:12px; font-weight:700; display:block; margin-bottom:4px;">🔍 Zoom Foto:</label>
+        <input type="range" id="finalZoomSlider" min="0.8" max="2.5" step="0.05" value="1" style="width:100%;">
+        <p style="font-size:11px; color:var(--plum-soft); margin:4px 0 0;">💡 Tahan & geser foto di atas untuk merapikan posisinya.</p>
+      </div>
+    </div>
+
+    <!-- Canvas Tersembunyi untuk Render HD saat Unduh/Cetak -->
+    <canvas id="finalCanvas" width="1200" height="3000" style="display:none;"></canvas>
     <div id="printArea"><img id="printImg"></div>
 
     <div class="btn-row">
@@ -936,52 +953,114 @@ document.getElementById('zoomSlider').oninput = (e) => {
   buildStripPreview();
 };
   
-document.getElementById('toFinalBtn').onclick = async ()=>{
+// Variable Global Offset Foto
+let photoOffsets = [];
+let currentZoom = 1;
+
+// 1. Saat berpindah ke layar Final
+document.getElementById('toFinalBtn').onclick = () => {
   showScreen('screen-final');
-  document.getElementById('downloadBtn').disabled=true;
-  document.getElementById('printBtn').disabled=true;
-  document.getElementById('sendPhoneBtn').disabled=true;
-  document.getElementById('codeBox').style.display='none';
-  document.getElementById('qrWrap').style.display='none';
-  state.finalReady=false;
-  try{
-    await renderFinalCanvas();
-    state.finalReady=true;
-    document.getElementById('downloadBtn').disabled=false;
-    document.getElementById('printBtn').disabled=false;
-    document.getElementById('sendPhoneBtn').disabled=false;
-    const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
-    if(thumb) addToHistory(thumb);
-    initHostPeer();
-  }catch(e){
-    alert('Gagal menyiapkan hasil akhir: '+e.message);
-  }
+  
+  // Inisialisasi offset geser foto jika belum ada
+  photoOffsets = state.photos.map(() => ({ x: 0, y: 0 }));
+  currentZoom = 1;
+  document.getElementById('finalZoomSlider').value = 1;
+
+  buildFinalInteractivePreview();
+
+  document.getElementById('downloadBtn').disabled = false;
+  document.getElementById('printBtn').disabled = false;
+  document.getElementById('sendPhoneBtn').disabled = false;
+  state.finalReady = true;
+  initHostPeer();
 };
 
-/* ===================== FINAL CANVAS ===================== */
-function renderFinalCanvas(){
-  return new Promise((resolve, reject)=>{
+// 2. Fungsi Membuat Preview Interaktif di Layar Akhir
+function buildFinalInteractivePreview() {
+  const wrap = document.getElementById('finalInteractiveWrap');
+  const f = state.selectedFrame || state.frames[0];
+
+  if (f.builtin) {
+    wrap.style.background = `linear-gradient(170deg, ${f.color}, white)`;
+    wrap.style.setProperty('--frame-overlay', 'none');
+  } else {
+    wrap.style.background = '#ffffff';
+    wrap.style.setProperty('--frame-overlay', `url(${f.dataUrl})`);
+  }
+
+  wrap.innerHTML = '';
+  const slotContainer = document.createElement('div');
+  slotContainer.className = 'slot-container';
+
+  state.order.forEach((photoIdx, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+
+    const img = document.createElement('img');
+    img.src = state.photos[photoIdx];
+
+    const offset = photoOffsets[i] || { x: 0, y: 0 };
+    img.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${currentZoom})`;
+
+    slot.appendChild(img);
+    slotContainer.appendChild(slot);
+
+    // Event Dragging (Mouse & Touch)
+    let isDragging = false, startX = 0, startY = 0;
+
+    slot.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      startX = e.clientX - (photoOffsets[i]?.x || 0);
+      startY = e.clientY - (photoOffsets[i]?.y || 0);
+      slot.setPointerCapture(e.pointerId);
+    });
+
+    slot.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      photoOffsets[i] = {
+        x: e.clientX - startX,
+        y: e.clientY - startY
+      };
+      img.style.transform = `translate(${photoOffsets[i].x}px, ${photoOffsets[i].y}px) scale(${currentZoom})`;
+    });
+
+    const stopDrag = () => { isDragging = false; };
+    slot.addEventListener('pointerup', stopDrag);
+    slot.addEventListener('pointercancel', stopDrag);
+  });
+
+  wrap.appendChild(slotContainer);
+}
+
+// Handler Slider Zoom
+document.getElementById('finalZoomSlider').oninput = (e) => {
+  currentZoom = parseFloat(e.target.value);
+  buildFinalInteractivePreview();
+};
+
+// 3. Render ke Canvas HD Mengikuti Hasil Geseran Pengguna
+function renderFinalCanvas() {
+  return new Promise((resolve, reject) => {
     const canvas = document.getElementById('finalCanvas');
     const ctx = canvas.getContext('2d');
 
     const layout = getDynamicLayout(state.photos.length);
     const { W, H } = layout;
-    
     canvas.width = W; 
     canvas.height = H;
+
     const f = state.selectedFrame || state.frames[0];
 
-    // Bersihkan Canvas
-    ctx.fillStyle = '#ffffff'; 
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
-    // Skala perbandingan antara Preview di Layar vs Canvas HD Asli
-    const previewEl = document.getElementById('stripPreview');
-    const previewW = previewEl ? previewEl.clientWidth : 200;
+    // Rasio Skala dari Preview Layar (220px) ke Canvas HD (1200px)
+    const previewEl = document.getElementById('finalInteractiveWrap');
+    const previewW = previewEl ? previewEl.clientWidth : 220;
     const scaleFactor = W / previewW;
 
-    let loaded = 0; 
-    const total = state.photos.length; 
+    let loaded = 0;
+    const total = state.photos.length;
     let failed = false;
 
     state.order.forEach((photoIdx, slotI) => {
@@ -991,88 +1070,61 @@ function renderFinalCanvas(){
         const pos = layout.positions[slotI];
         const px = pos.x, py = pos.y, pw = pos.w, ph = pos.h;
 
-        // Ambil offset & zoom dari state preview
-        const offset = (state.photoOffsets && state.photoOffsets[slotI]) 
-          ? state.photoOffsets[slotI] 
-          : { x: 0, y: 0, zoom: 1 };
-
-        const userZoom = offset.zoom || 1;
-        const scale = Math.max(pw / im.width, ph / im.height) * userZoom;
+        const offset = photoOffsets[slotI] || { x: 0, y: 0 };
+        const scale = Math.max(pw / im.width, ph / im.height) * currentZoom;
         const dw = im.width * scale;
         const dh = im.height * scale;
 
-        // Terapkan pergeseran x/y dari preview yang di-scale up ke Canvas HD
+        // Hitung pergeseran posisi sesuai hasil drag pengguna
         const dx = px + (pw - dw) / 2 + (offset.x * scaleFactor);
         const dy = py + (ph - dh) / 2 + (offset.y * scaleFactor);
 
-        ctx.save(); 
-        ctx.beginPath(); 
-        roundRect(ctx, px, py, pw, ph, 16); 
+        ctx.save();
+        ctx.beginPath();
+        roundRect(ctx, px, py, pw, ph, 16);
         ctx.clip();
-        ctx.drawImage(im, dx, dy, dw, dh); 
+        ctx.drawImage(im, dx, dy, dw, dh);
         ctx.restore();
 
         loaded++;
         if (loaded === total) {
           if (!f.builtin && f.dataUrl) {
             const overlay = new Image();
-            overlay.onload = () => { 
-              ctx.drawImage(overlay, 0, 0, W, H); 
-              resolve(); 
+            overlay.onload = () => {
+              ctx.drawImage(overlay, 0, 0, W, H);
+              resolve();
             };
-            overlay.onerror = () => { resolve(); };
+            overlay.onerror = () => resolve();
             overlay.src = f.dataUrl;
           } else {
-            finishCanvasFooter(ctx, W, H, f); 
+            finishCanvasFooter(ctx, W, H, f);
             resolve();
           }
         }
       };
-      im.onerror = () => { 
-        failed = true; 
-        reject(new Error('Gagal memuat foto.')); 
-      };
+      im.onerror = () => { failed = true; reject(new Error('Gagal memuat foto.')); };
       im.src = state.photos[photoIdx];
     });
   });
 }
-function finishCanvasFooter(ctx,W,H,f){
-  ctx.fillStyle=f.accent||'#E9A6BC'; ctx.font="italic 58px 'Fraunces', serif"; ctx.textAlign='center';
-  ctx.fillText('✿ Petal Booth ✿', W/2, H-70);
-  ctx.font="30px 'Quicksand', sans-serif"; ctx.fillStyle='#8A7594';
-  const dateStr=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
-  ctx.fillText(dateStr, W/2, H-24);
-}
-function roundRect(ctx,x,y,w,h,r){
-  ctx.beginPath(); ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
-}
-function safeDataUrl(){
-  const canvas=document.getElementById('finalCanvas');
-  try{ 
-    // Export ke PNG tanpa lossy compression untuk hasil print yang tajam
-    return canvas.toDataURL('image/png'); 
-  }
-  catch(e){
-    alert('Gagal memproses gambar. Coba pakai Kamera Perangkat.');
-    return null;
-  }
-}
 
-document.getElementById('downloadBtn').onclick=()=>{
-  if(!state.finalReady) return;
-  const dataUrl=safeDataUrl(); if(!dataUrl) return;
-  const a=document.createElement('a'); 
-  a.download='petal-booth-HD-'+Date.now()+'.png'; 
-  a.href=dataUrl; 
+// 4. Update Handler Tombol Aksi untuk Memanggil Canvas Terlebih Dahulu
+document.getElementById('downloadBtn').onclick = async () => {
+  await renderFinalCanvas();
+  const dataUrl = safeDataUrl(); 
+  if (!dataUrl) return;
+  const a = document.createElement('a'); 
+  a.download = 'petal-booth-' + Date.now() + '.png'; 
+  a.href = dataUrl; 
   a.click();
 };
-document.getElementById('printBtn').onclick=()=>{
-  if(!state.finalReady) return;
-  const dataUrl=safeDataUrl(); if(!dataUrl) return;
-  document.getElementById('printImg').src=dataUrl;
-  setTimeout(()=>window.print(), 120);
+
+document.getElementById('printBtn').onclick = async () => {
+  await renderFinalCanvas();
+  const dataUrl = safeDataUrl(); 
+  if (!dataUrl) return;
+  document.getElementById('printImg').src = dataUrl;
+  setTimeout(() => window.print(), 120);
 };
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.order=Array.from({length: state.maxPhotos}, (_, i) => i); state.selectedFrame=null;
