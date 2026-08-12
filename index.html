@@ -196,7 +196,8 @@
 <div class="screen active" id="screen-start">
   <div class="card">
     <h2 style="margin-bottom:6px;">Mulai sesi foto</h2>
-    <p class="lead">Ambil 4 foto, pilih frame kesukaanmu, atur urutannya, lalu simpan atau cetak. ✿</p>
+    <p class="lead">Pilih jumlah foto, ambil gambar, lalu pilih frame kesukaanmu. ✿</p>
+    
     <div class="start-grid">
       <div class="start-option" id="optBuiltin">
         <span class="ic">💻</span>
@@ -207,7 +208,20 @@
         <div class="txt"><b>Kamera HP (live, scan QR)</b><span>HP lain jadi kamera photobooth</span></div>
       </div>
     </div>
-    <div class="btn-row"><button class="btn btn-primary" id="startBtn">Mulai Foto →</button></div>
+
+    <!-- TARUH PILIHAN JUMLAH FOTO DI SINI -->
+    <div class="photo-count-selector" style="margin-top: 20px; text-align: center;">
+      <label style="font-weight: 700; display: block; margin-bottom: 8px;">Pilih Jumlah Foto:</label>
+      <div class="btn-row" style="margin-top: 0;">
+        <button class="btn btn-ghost photo-count-btn active" data-count="3" type="button">3 Foto</button>
+        <button class="btn btn-ghost photo-count-btn" data-count="4" type="button">4 Foto</button>
+      </div>
+    </div>
+
+    <!-- Tombol Mulai Foto -->
+    <div class="btn-row">
+      <button class="btn btn-primary" id="startBtn">Mulai Foto →</button>
+    </div>
   </div>
 </div>
 
@@ -377,13 +391,26 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script>
 /* ===================== LAYOUT ===================== */
-const LAYOUT = (()=>{
-  const W=900, PAD=50, GAP=32, photoW=800, photoH=675, footerH=158;
-  const H = PAD + (photoH+GAP)*4 + footerH;
-  const positions=[]; let y=PAD;
-  for(let i=0;i<4;i++){ positions.push(y); y+=photoH+GAP; }
-  return {W,H,PAD,GAP,photoW,photoH,footerH,positions};
-})();
+function getDynamicLayout(photoCount) {
+  const W = 1200; // Resolusi Lebar HD
+  const H = 3000; // Resolusi Tinggi HD (Rasio 2:5 untuk cetak 6x15)
+  const PAD = 60;
+  const GAP = 40;
+  const footerH = 200;
+  
+  const photoW = W - (PAD * 2);
+  const availableH = H - (PAD * 2) - footerH - (GAP * (photoCount - 1));
+  const photoH = Math.floor(availableH / photoCount);
+
+  const positions = [];
+  let y = PAD;
+  for (let i = 0; i < photoCount; i++) {
+    positions.push(y);
+    y += photoH + GAP;
+  }
+
+  return { W, H, PAD, GAP, photoW, photoH, footerH, positions };
+}
 const HISTORY_KEY = 'petalBoothHistory';
 const HISTORY_MAX = 20;
 
@@ -413,7 +440,7 @@ function qrImageUrl(data, size){
 
 /* ===================== STATE ===================== */
 const state = {
-  camSource:'builtin', stream:null, photos:[], order:[0,1,2,3],
+  camSource:'builtin', stream:null, photos:[], order:[0,1,2,3], maxPhotos: 4,
   mirror:true,
   frames:[
     {id:'f1', name:'Pita Merah Muda', color:'#F9E1EA', accent:'#E9A6BC', emoji:'🎀', builtin:true},
@@ -427,6 +454,7 @@ const state = {
   finalReady:false,
   history:[],
 };
+  
 
 /* ===================== NAV ===================== */
 function showScreen(id){
@@ -450,6 +478,14 @@ function highlightOpt(id){
   document.querySelectorAll('.start-option').forEach(o=>o.style.borderColor='var(--pink)');
   document.getElementById(id).style.borderColor='var(--pink-deep)';
 }
+  // Logika ganti tombol jumlah foto yang aktif
+document.querySelectorAll('.photo-count-btn').forEach(btn => {
+  btn.onclick = (e) => {
+    document.querySelectorAll('.photo-count-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    state.maxPhotos = parseInt(e.target.dataset.count);
+  };
+});
 document.getElementById('startBtn').onclick=()=>{
   state.photos=[]; document.getElementById('shotsRow').innerHTML='';
   showScreen('screen-capture');
