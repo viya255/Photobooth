@@ -108,41 +108,50 @@
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   .strip-editor{display:flex; gap:24px; width:100%; margin-top:22px; flex-wrap:wrap; justify-content:center;}
   .strip-preview {
-  width: 160px; 
-  aspect-ratio: 2/5; 
-  border-radius: 14px; 
-  position: relative; 
-  overflow: hidden; 
-  box-shadow: var(--shadow); 
+  width: 200px;
+  aspect-ratio: 2/5;
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
   background: #ffffff;
 }
 
-/* Foto ditaruh di bawah overlay */
+.strip-preview .slot-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 1; /* Di bawah frame */
+}
+
 .strip-preview .slot {
-  position: absolute; 
-  border-radius: 4px; 
-  overflow: hidden; 
-  cursor: grab; 
-  z-index: 1;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  cursor: move;
 }
 
 .strip-preview .slot img {
-  width: 100%; 
-  height: 100%; 
-  object-fit: cover; 
-  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  transform-origin: center;
+  transition: transform 0.05s linear;
 }
 
-/* Overlay frame custom di atas foto */
+/* Gambar Frame selalu menutupi di atas foto */
 .strip-preview::after {
-  content: ""; 
-  position: absolute; 
-  inset: 0; 
-  background-image: var(--frame-overlay, none); 
-  background-size: 100% 100%; 
-  background-position: center; 
-  pointer-events: none; 
-  z-index: 10;
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--frame-overlay, none);
+  background-size: 100% 100%;
+  background-position: center;
+  pointer-events: none; /* Klik tembus ke foto di bawahnya */
+  z-index: 10; /* Berada di atas foto */
 }
   .editor-hint{flex:1; min-width:180px;}
   .editor-hint ul{padding-left:18px; color:var(--plum-soft); font-size:13.5px; line-height:1.8;}
@@ -314,29 +323,31 @@
 </div>
 
 <!-- FRAME + EDIT -->
+<!-- FRAME + EDIT -->
 <div class="screen" id="screen-frame">
   <div class="stepper"><div class="dot done">📷</div><div class="dot now">🖼️</div><div class="dot">✓</div></div>
   <div class="card">
     <h2>Pilih frame favoritmu</h2>
-    <p class="lead">Pilih frame dan sesuaikan urutan foto jika diinginkan.</p>
+    <p class="lead">Pilih frame dan sesuaikan posisi foto agar pas di kolom frame.</p>
     <div class="frame-gallery" id="frameGallery"></div>
 
-    <div class="strip-editor">
+    <div class="strip-editor" style="display:flex; flex-direction:column; align-items:center; gap:16px;">
       <div class="strip-preview" id="stripPreview"></div>
-      <div class="editor-hint">
-        <h3 style="font-size:16px;">Tips mengedit</h3>
-        <ul>
-          <li>Tahan &amp; geser foto untuk tukar posisi</li>
-        </ul>
+      
+      <!-- Kontrol Atur Posisi Foto -->
+      <div class="photo-controls" style="width:100%; max-width:320px; background:var(--cream); padding:14px; border-radius:16px; border:1px solid var(--pink-deep);">
+        <label style="font-size:13px; font-weight:700; display:block; margin-bottom:6px;">🔍 Zoom Foto:</label>
+        <input type="range" id="zoomSlider" min="0.8" max="2" step="0.05" value="1" style="width:100%;">
+        <p style="font-size:11px; color:var(--plum-soft); margin:6px 0 0; text-align:center;">💡 Tahan & geser foto di atas untuk menyesuaikan posisinya di dalam frame.</p>
       </div>
     </div>
+
     <div class="btn-row">
       <button class="btn btn-ghost" id="backToCaptureBtn">← Foto Ulang</button>
       <button class="btn btn-primary" id="toFinalBtn">Lanjut →</button>
     </div>
   </div>
 </div>
-
 <!-- MANAGE FRAMES -->
 <div class="screen" id="screen-manage-frames">
   <div class="card">
@@ -843,61 +854,79 @@ document.getElementById('frameUpload').onchange=(e)=>{
   e.target.value='';
 };
 
+let photoOffsets = [{x:0, y:0}, {x:0, y:0}, {x:0, y:0}, {x:0, y:0}];
+let currentZoom = 1;
+
 function buildStripPreview(){
   const wrap = document.getElementById('stripPreview');
   const f = state.selectedFrame || state.frames[0];
-  const count = state.photos.length || state.maxPhotos;
-  const layout = getDynamicLayout(count);
 
   if (f.builtin) {
     wrap.style.background = `linear-gradient(170deg, ${f.color}, white)`;
     wrap.style.setProperty('--frame-overlay', 'none');
   } else {
     wrap.style.background = '#ffffff';
-    // Memasang gambar frame custom sebagai overlay di atas
     wrap.style.setProperty('--frame-overlay', `url(${f.dataUrl})`);
   }
 
   wrap.innerHTML = '';
+  const slotContainer = document.createElement('div');
+  slotContainer.className = 'slot-container';
+
   state.order.forEach((photoIdx, i) => {
-    const pos = layout.positions[i];
-    if (!pos) return;
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.dataset.index = i;
+
+    const img = document.createElement('img');
+    img.src = state.photos[photoIdx];
     
-    const slot = document.createElement('div'); 
-    slot.className = 'slot'; 
-    slot.dataset.photoIdx = photoIdx;
+    const offset = photoOffsets[i] || {x:0, y:0};
+    img.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${currentZoom})`;
 
-    // Menempatkan foto persis di dalam kotak lubang frame
-    slot.style.left = (pos.x / layout.W * 100) + '%';
-    slot.style.top = (pos.y / layout.H * 100) + '%';
-    slot.style.width = (pos.w / layout.W * 100) + '%';
-    slot.style.height = (pos.h / layout.H * 100) + '%';
-
-    const img = document.createElement('img'); 
-    img.src = state.photos[photoIdx]; 
     slot.appendChild(img);
-    wrap.appendChild(slot);
+    slotContainer.appendChild(slot);
+
+    let isDragging = false, startX = 0, startY = 0;
+    
+    slot.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      startX = e.clientX - (photoOffsets[i]?.x || 0);
+      startY = e.clientY - (photoOffsets[i]?.y || 0);
+      slot.setPointerCapture(e.pointerId);
+    });
+
+    slot.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      photoOffsets[i] = {
+        x: e.clientX - startX,
+        y: e.clientY - startY
+      };
+      img.style.transform = `translate(${photoOffsets[i].x}px, ${photoOffsets[i].y}px) scale(${currentZoom})`;
+    });
+
+    const stopDrag = () => { isDragging = false; };
+    slot.addEventListener('pointerup', stopDrag);
+    slot.addEventListener('pointercancel', stopDrag);
   });
 
+  wrap.appendChild(slotContainer);
+
   if (f.builtin) {
-    const cap = document.createElement('div'); 
-    cap.className = 'cap'; 
-    cap.textContent = '✿ Petal Booth ✿'; 
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = '✿ Petal Booth ✿';
     cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:5; font-family:Caveat,cursive;';
     wrap.appendChild(cap);
   }
-
-  if (state.sortable) state.sortable.destroy();
-  state.sortable = new Sortable(wrap, {
-    animation: 150, 
-    filter: '.cap', 
-    draggable: '.slot', 
-    ghostClass: 'dragging',
-    onEnd: () => { 
-      state.order = Array.from(wrap.querySelectorAll('.slot')).map(s => parseInt(s.dataset.photoIdx)); 
-    }
-  });
 }
+
+// Event slider zoom
+document.getElementById('zoomSlider').oninput = (e) => {
+  currentZoom = parseFloat(e.target.value);
+  buildStripPreview();
+};
+  
 document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
   document.getElementById('downloadBtn').disabled=true;
