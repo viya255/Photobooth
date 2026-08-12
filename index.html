@@ -107,33 +107,38 @@
   .upload-frame-tile{border:2px dashed var(--pink-deep); border-radius:16px; aspect-ratio:2/5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--pink-deep); font-size:12px; font-weight:700; background:var(--pink);}
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   .strip-editor{display:flex; gap:24px; width:100%; margin-top:22px; flex-wrap:wrap; justify-content:center;}
-  .strip-preview {
-  width: 150px; 
-  padding: 12px 10px; 
+  .strip-preview{
+  width: 160px; 
+  aspect-ratio: 2/5; 
   border-radius: 14px; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 8px; 
+  position: relative; 
+  overflow: hidden; 
   box-shadow: var(--shadow); 
-  position: relative;
-  overflow: hidden;
+  background: #ffffff;
 }
-
-/* Pseudo-element untuk menaruh frame custom di atas foto */
-.strip-preview::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: var(--frame-overlay, none);
-  background-size: cover;
-  background-position: center;
-  pointer-events: none; /* Agar foto di bawahnya tetap bisa di-drag */
+.strip-preview .slot{
+  position: absolute; 
+  border-radius: 4px; 
+  overflow: hidden; 
+  cursor: grab; 
+  z-index: 1;
+}
+.strip-preview .slot img{
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  display: block;
+}
+.strip-preview::after{
+  content: ""; 
+  position: absolute; 
+  inset: 0; 
+  background-image: var(--frame-overlay, none); 
+  background-size: 100% 100%; 
+  background-position: center; 
+  pointer-events: none; 
   z-index: 10;
 }
-  .strip-preview .slot{width:100%; aspect-ratio:4/3; border-radius:8px; overflow:hidden; cursor:grab; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,.15);}
-  .strip-preview .slot img{width:100%; height:100%; object-fit:cover;}
-  .strip-preview .slot.dragging{opacity:.35;}
-  .strip-preview .cap{text-align:center; font-family:'Caveat',cursive; font-size:16px; color:var(--plum); margin-top:2px;}
   .editor-hint{flex:1; min-width:180px;}
   .editor-hint ul{padding-left:18px; color:var(--plum-soft); font-size:13.5px; line-height:1.8;}
   #finalCanvas{max-width:220px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;}
@@ -420,24 +425,36 @@
 <script>
 /* ===================== LAYOUT ===================== */
 function getDynamicLayout(photoCount) {
-  const W = 1200; // Resolusi Lebar HD
-  const H = 3000; // Resolusi Tinggi HD (Rasio 2:5 untuk cetak 6x15)
-  const PAD = 60;
-  const GAP = 40;
-  const footerH = 200;
+  const W = 1200; // Lebar tetap HD 6x15
+  const H = 3000; // Tinggi tetap HD 6x15
   
-  const photoW = W - (PAD * 2);
-  const availableH = H - (PAD * 2) - footerH - (GAP * (photoCount - 1));
-  const photoH = Math.floor(availableH / photoCount);
-
-  const positions = [];
-  let y = PAD;
-  for (let i = 0; i < photoCount; i++) {
-    positions.push(y);
-    y += photoH + GAP;
+  if (photoCount === 3) {
+    const photoW = 920;
+    const photoH = 690;
+    const x = (W - photoW) / 2; // 140px (di tengah)
+    const startY = 160;
+    const gap = 150;
+    const positions = [
+      { x, y: startY, w: photoW, h: photoH },
+      { x, y: startY + photoH + gap, w: photoW, h: photoH },
+      { x, y: startY + (photoH + gap) * 2, w: photoW, h: photoH }
+    ];
+    return { W, H, photoW, photoH, positions };
+  } else {
+    // Untuk 4 Foto
+    const photoW = 860;
+    const photoH = 625;
+    const x = (W - photoW) / 2; // 170px (di tengah)
+    const startY = 90;
+    const gap = 50;
+    const positions = [
+      { x, y: startY, w: photoW, h: photoH },
+      { x, y: startY + photoH + gap, w: photoW, h: photoH },
+      { x, y: startY + (photoH + gap) * 2, w: photoW, h: photoH },
+      { x, y: startY + (photoH + gap) * 3, w: photoW, h: photoH }
+    ];
+    return { W, H, photoW, photoH, positions };
   }
-
-  return { W, H, PAD, GAP, photoW, photoH, footerH, positions };
 }
 const LAYOUT = { W: 1200, H: 3000 };
 const HISTORY_KEY = 'petalBoothHistory';
@@ -813,7 +830,9 @@ document.getElementById('frameUpload').onchange=(e)=>{
 function buildStripPreview(){
   const wrap = document.getElementById('stripPreview');
   const f = state.selectedFrame || state.frames[0];
-  
+  const count = state.photos.length || state.maxPhotos;
+  const layout = getDynamicLayout(count);
+
   if (f.builtin) {
     wrap.style.background = `linear-gradient(170deg, ${f.color}, white)`;
     wrap.style.setProperty('--frame-overlay', 'none');
@@ -823,10 +842,20 @@ function buildStripPreview(){
   }
 
   wrap.innerHTML = '';
-  state.order.forEach((photoIdx) => {
+  state.order.forEach((photoIdx, i) => {
+    const pos = layout.positions[i];
+    if (!pos) return;
+    
     const slot = document.createElement('div'); 
     slot.className = 'slot'; 
     slot.dataset.photoIdx = photoIdx;
+
+    // Menghitung posisi persentase agar sama dengan canvas akhir
+    slot.style.left = (pos.x / layout.W * 100) + '%';
+    slot.style.top = (pos.y / layout.H * 100) + '%';
+    slot.style.width = (pos.w / layout.W * 100) + '%';
+    slot.style.height = (pos.h / layout.H * 100) + '%';
+
     const img = document.createElement('img'); 
     img.src = state.photos[photoIdx]; 
     slot.appendChild(img);
@@ -837,6 +866,7 @@ function buildStripPreview(){
     const cap = document.createElement('div'); 
     cap.className = 'cap'; 
     cap.textContent = '✿ Petal Booth ✿'; 
+    cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:5; font-family:Caveat,cursive;';
     wrap.appendChild(cap);
   }
 
@@ -896,26 +926,41 @@ function renderFinalCanvas(){
     }
 
     let loaded=0; const total=state.photos.length; let failed=false;
-    state.order.forEach((photoIdx, slotI)=>{
+   state.order.forEach((photoIdx, slotI)=>{
       const im=new Image();
       im.onload=()=>{
         if(failed) return;
-        const py=positions[slotI];
-        const scale=Math.max(photoW/im.width, photoH/im.height);
+        const pos = layout.positions[slotI];
+        const px = pos.x, py = pos.y, pw = pos.w, ph = pos.h;
+
+        const scale=Math.max(pw/im.width, ph/im.height);
         const dw=im.width*scale, dh=im.height*scale;
-        const dx=PAD+(photoW-dw)/2, dy=py+(photoH-dh)/2;
-        ctx.save(); ctx.beginPath(); roundRect(ctx,PAD,py,photoW,photoH,22); ctx.clip();
-        ctx.drawImage(im,dx,dy,dw,dh); ctx.restore();
-        ctx.strokeStyle='#ffffff'; ctx.lineWidth=8; roundRect(ctx,PAD,py,photoW,photoH,22); ctx.stroke();
+        const dx=px+(pw-dw)/2, dy=py+(ph-dh)/2;
+
+        ctx.save(); 
+        ctx.beginPath(); 
+        roundRect(ctx, px, py, pw, ph, 16); 
+        ctx.clip();
+        ctx.drawImage(im, dx, dy, dw, dh); 
+        ctx.restore();
+
+        if (f.builtin) {
+          ctx.strokeStyle='#ffffff'; 
+          ctx.lineWidth=8; 
+          roundRect(ctx, px, py, pw, ph, 16); 
+          ctx.stroke();
+        }
+
         loaded++;
         if(loaded===total){
           if(!f.builtin && f.dataUrl){
             const overlay=new Image();
-            overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); finishCanvasFooter(ctx,W,H,f); resolve(); };
-            overlay.onerror=()=>{ finishCanvasFooter(ctx,W,H,f); resolve(); };
+            overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); resolve(); };
+            overlay.onerror=()=>{ resolve(); };
             overlay.src=f.dataUrl;
           } else {
-            finishCanvasFooter(ctx,W,H,f); resolve();
+            finishCanvasFooter(ctx,W,H,f); 
+            resolve();
           }
         }
       };
