@@ -130,16 +130,18 @@
   width: 100%;
   overflow: hidden;
   position: relative;
-  cursor: move;
+  cursor: grab;
+  touch-action: none;
 }
-
+.strip-preview .slot:active {
+  cursor: grabbing;
+}
 .strip-preview .slot img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   pointer-events: none;
-  transform-origin: center;
-  transition: transform 0.05s linear;
+  user-select: none;
 }
 
 /* Gambar Frame selalu menutupi di atas foto */
@@ -873,6 +875,13 @@ function buildStripPreview(){
   const slotContainer = document.createElement('div');
   slotContainer.className = 'slot-container';
 
+  // Inisialisasi offset jika belum ada
+  if (!state.photoOffsets || state.photoOffsets.length !== state.photos.length) {
+    state.photoOffsets = state.photos.map(() => ({ x: 0, y: 0, zoom: 1 }));
+  }
+
+  const layout = getDynamicLayout(state.photos.length);
+
   state.order.forEach((photoIdx, i) => {
     const slot = document.createElement('div');
     slot.className = 'slot';
@@ -881,7 +890,7 @@ function buildStripPreview(){
     const img = document.createElement('img');
     img.src = state.photos[photoIdx];
     
-    const offset = photoOffsets[i] || {x:0, y:0};
+    const offset = state.photoOffsets[i] || { x: 0, y: 0, zoom: 1 };
     img.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${currentZoom})`;
 
     slot.appendChild(img);
@@ -891,18 +900,17 @@ function buildStripPreview(){
     
     slot.addEventListener('pointerdown', (e) => {
       isDragging = true;
-      startX = e.clientX - (photoOffsets[i]?.x || 0);
-      startY = e.clientY - (photoOffsets[i]?.y || 0);
+      startX = e.clientX - (state.photoOffsets[i]?.x || 0);
+      startY = e.clientY - (state.photoOffsets[i]?.y || 0);
       slot.setPointerCapture(e.pointerId);
     });
 
     slot.addEventListener('pointermove', (e) => {
       if (!isDragging) return;
-      photoOffsets[i] = {
-        x: e.clientX - startX,
-        y: e.clientY - startY
-      };
-      img.style.transform = `translate(${photoOffsets[i].x}px, ${photoOffsets[i].y}px) scale(${currentZoom})`;
+      state.photoOffsets[i].x = e.clientX - startX;
+      state.photoOffsets[i].y = e.clientY - startY;
+      state.photoOffsets[i].zoom = currentZoom;
+      img.style.transform = `translate(${state.photoOffsets[i].x}px, ${state.photoOffsets[i].y}px) scale(${currentZoom})`;
     });
 
     const stopDrag = () => { isDragging = false; };
@@ -911,6 +919,7 @@ function buildStripPreview(){
   });
 
   wrap.appendChild(slotContainer);
+}
 
   if (f.builtin) {
     const cap = document.createElement('div');
@@ -952,36 +961,49 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
 /* ===================== FINAL CANVAS ===================== */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
-   const canvas=document.getElementById('finalCanvas');
-   const ctx=canvas.getContext('2d');
+    const canvas = document.getElementById('finalCanvas');
+    const ctx = canvas.getContext('2d');
 
-   // Memanggil layout dinamis (HD 6x15) berdasarkan jumlah foto yang diambil
-   const layout = getDynamicLayout(state.photos.length);
-   const {W,H,PAD,photoW,photoH,positions} = layout;
+    const layout = getDynamicLayout(state.photos.length);
+    const { W, H } = layout;
     
-    canvas.width=W; canvas.height=H;
-    const f=state.selectedFrame||state.frames[0];
+    canvas.width = W; 
+    canvas.height = H;
+    const f = state.selectedFrame || state.frames[0];
 
-    if(f.builtin){
-      const grad=ctx.createLinearGradient(0,0,0,H);
-      grad.addColorStop(0,f.color); grad.addColorStop(1,'#ffffff');
-      ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-      ctx.strokeStyle=f.accent; ctx.lineWidth=14; ctx.strokeRect(7,7,W-14,H-14);
-    } else {
-      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
-    }
+    // Bersihkan Canvas
+    ctx.fillStyle = '#ffffff'; 
+    ctx.fillRect(0, 0, W, H);
 
-    let loaded=0; const total=state.photos.length; let failed=false;
-   state.order.forEach((photoIdx, slotI)=>{
-      const im=new Image();
-      im.onload=()=>{
-        if(failed) return;
+    // Skala perbandingan antara Preview di Layar vs Canvas HD Asli
+    const previewEl = document.getElementById('stripPreview');
+    const previewW = previewEl ? previewEl.clientWidth : 200;
+    const scaleFactor = W / previewW;
+
+    let loaded = 0; 
+    const total = state.photos.length; 
+    let failed = false;
+
+    state.order.forEach((photoIdx, slotI) => {
+      const im = new Image();
+      im.onload = () => {
+        if (failed) return;
         const pos = layout.positions[slotI];
         const px = pos.x, py = pos.y, pw = pos.w, ph = pos.h;
 
-        const scale=Math.max(pw/im.width, ph/im.height);
-        const dw=im.width*scale, dh=im.height*scale;
-        const dx=px+(pw-dw)/2, dy=py+(ph-dh)/2;
+        // Ambil offset & zoom dari state preview
+        const offset = (state.photoOffsets && state.photoOffsets[slotI]) 
+          ? state.photoOffsets[slotI] 
+          : { x: 0, y: 0, zoom: 1 };
+
+        const userZoom = offset.zoom || 1;
+        const scale = Math.max(pw / im.width, ph / im.height) * userZoom;
+        const dw = im.width * scale;
+        const dh = im.height * scale;
+
+        // Terapkan pergeseran x/y dari preview yang di-scale up ke Canvas HD
+        const dx = px + (pw - dw) / 2 + (offset.x * scaleFactor);
+        const dy = py + (ph - dh) / 2 + (offset.y * scaleFactor);
 
         ctx.save(); 
         ctx.beginPath(); 
@@ -990,28 +1012,27 @@ function renderFinalCanvas(){
         ctx.drawImage(im, dx, dy, dw, dh); 
         ctx.restore();
 
-        if (f.builtin) {
-          ctx.strokeStyle='#ffffff'; 
-          ctx.lineWidth=8; 
-          roundRect(ctx, px, py, pw, ph, 16); 
-          ctx.stroke();
-        }
-
         loaded++;
-        if(loaded===total){
-          if(!f.builtin && f.dataUrl){
-            const overlay=new Image();
-            overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); resolve(); };
-            overlay.onerror=()=>{ resolve(); };
-            overlay.src=f.dataUrl;
+        if (loaded === total) {
+          if (!f.builtin && f.dataUrl) {
+            const overlay = new Image();
+            overlay.onload = () => { 
+              ctx.drawImage(overlay, 0, 0, W, H); 
+              resolve(); 
+            };
+            overlay.onerror = () => { resolve(); };
+            overlay.src = f.dataUrl;
           } else {
-            finishCanvasFooter(ctx,W,H,f); 
+            finishCanvasFooter(ctx, W, H, f); 
             resolve();
           }
         }
       };
-      im.onerror=()=>{ failed=true; reject(new Error('Salah satu foto gagal dimuat.')); };
-      im.src=state.photos[photoIdx];
+      im.onerror = () => { 
+        failed = true; 
+        reject(new Error('Gagal memuat foto.')); 
+      };
+      im.src = state.photos[photoIdx];
     });
   });
 }
