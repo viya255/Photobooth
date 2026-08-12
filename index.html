@@ -793,16 +793,23 @@ function roundRect(ctx,x,y,w,h,r){
 }
 function safeDataUrl(){
   const canvas=document.getElementById('finalCanvas');
-  try{ return canvas.toDataURL('image/jpeg',0.95); }
+  try{ 
+    // Export ke PNG tanpa lossy compression untuk hasil print yang tajam
+    return canvas.toDataURL('image/png'); 
+  }
   catch(e){
     alert('Gagal memproses gambar. Coba pakai Kamera Perangkat.');
     return null;
   }
 }
+
 document.getElementById('downloadBtn').onclick=()=>{
   if(!state.finalReady) return;
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
-  const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.jpg'; a.href=dataUrl; a.click();
+  const a=document.createElement('a'); 
+  a.download='petal-booth-HD-'+Date.now()+'.png'; 
+  a.href=dataUrl; 
+  a.click();
 };
 document.getElementById('printBtn').onclick=()=>{
   if(!state.finalReady) return;
