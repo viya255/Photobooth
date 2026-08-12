@@ -131,16 +131,20 @@
   .free-photo-layer {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    z-index: 10;
     touch-action: none;
   }
 
   .placed-photo {
     position: absolute;
-    cursor: move;
+    cursor: grab;
     user-select: none;
     touch-action: none;
-    z-index: 2;
+    z-index: 10;
+  }
+
+  .placed-photo:active {
+    cursor: grabbing;
   }
 
   .placed-photo img {
@@ -166,7 +170,7 @@
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 5;
+    z-index: 20;
     pointer-events: auto;
   }
 
@@ -179,7 +183,7 @@
     outline: 2px dashed var(--pink-deep);
   }
 
-  /* Overlay Frame - DIBUAT DENGAN pointer-events: none AGAR BISA KLIK FOTO DI BAWAHNYA */
+  /* Layer Frame Overlay - DIBUAT PASIF */
   .strip-preview .frame-overlay-img {
     position: absolute;
     inset: 0;
@@ -187,7 +191,7 @@
     height: 100%;
     object-fit: fill;
     pointer-events: none !important;
-    z-index: 10;
+    z-index: 5;
   }
 
   /* Mini Frame Switcher di Editor */
@@ -964,7 +968,6 @@ function setupEditorWorkspace(){
   renderFreeEditor();
 }
 
-/* Pemilih Frame Cepat Langsung dari Layar Editor Final */
 function buildEditorFrameSelector(){
   const wrap = document.getElementById('editorFrameSelector');
   if(!wrap) return;
@@ -1036,55 +1039,79 @@ function renderFreeEditor(){
     };
     el.appendChild(delBtn);
 
-    /* Event Pointer (Geser / Drag) */
-    let isDragging = false, startX = 0, startY = 0;
+    /* LOGIKA DRAG STABIL DENGAN GLOBAL WINDOW LISTENER */
+    let isDragging = false;
+    let startX = 0, startY = 0;
 
-    const startDrag = (e) => {
+    const onPointerDown = (e) => {
       if(e.target.classList.contains('photo-del-btn')) return;
+      e.preventDefault();
+      
       isDragging = true;
-      startX = e.clientX - item.x;
-      startY = e.clientY - item.y;
       selectedPlacedPhotoId = item.id;
+      
+      // Update outline visual tanpa destroy DOM
+      document.querySelectorAll('.placed-photo').forEach(node => node.classList.remove('selected'));
+      el.classList.add('selected');
       
       const slider = document.getElementById('sizeSlider');
       if(slider) slider.value = item.scale;
 
-      renderFreeEditor();
-      try { el.setPointerCapture(e.pointerId); } catch(err){}
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      
+      startX = clientX - item.x;
+      startY = clientY - item.y;
+
+      const onPointerMove = (moveEv) => {
+        if (!isDragging) return;
+        moveEv.preventDefault();
+        
+        const curX = moveEv.clientX || (moveEv.touches && moveEv.touches[0].clientX);
+        const curY = moveEv.clientY || (moveEv.touches && moveEv.touches[0].clientY);
+        
+        if (curX === undefined || curY === undefined) return;
+        
+        item.x = curX - startX;
+        item.y = curY - startY;
+        
+        el.style.left = item.x + 'px';
+        el.style.top = item.y + 'px';
+
+        if(state.finalReady) {
+          renderFinalCanvas();
+        }
+      };
+
+      const onPointerUp = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        window.removeEventListener('pointercancel', onPointerUp);
+        window.removeEventListener('touchmove', onPointerMove);
+        window.removeEventListener('touchend', onPointerUp);
+      };
+
+      window.addEventListener('pointermove', onPointerMove, { passive: false });
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
+      window.addEventListener('touchmove', onPointerMove, { passive: false });
+      window.addEventListener('touchend', onPointerUp);
     };
 
-    const doDrag = (e) => {
-      if (!isDragging) return;
-      item.x = e.clientX - startX;
-      item.y = e.clientY - startY;
-      el.style.left = item.x + 'px';
-      el.style.top = item.y + 'px';
-
-      if(state.finalReady) {
-        renderFinalCanvas();
-      }
-    };
-
-    const stopDrag = (e) => { 
-      isDragging = false; 
-      try { el.releasePointerCapture(e.pointerId); } catch(err){}
-    };
-
-    el.addEventListener('pointerdown', startDrag);
-    el.addEventListener('pointermove', doDrag);
-    el.addEventListener('pointerup', stopDrag);
-    el.addEventListener('pointercancel', stopDrag);
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('touchstart', onPointerDown, { passive: false });
 
     layer.appendChild(el);
   });
 
-  wrap.appendChild(layer);
-
-  /* Layer Frame Overlay - DIJAMIN pointer-events: none */
+  // Susun elemen: Frame Overlay lebih dahulu di belakang, lalu Layer Foto
   if (!f.builtin && f.dataUrl) {
     const frameOverlay = document.createElement('img');
     frameOverlay.className = 'frame-overlay-img';
     frameOverlay.src = f.dataUrl;
+    frameOverlay.setAttribute('style', 'pointer-events: none !important; z-index: 5;');
     wrap.appendChild(frameOverlay);
   } else if (f.builtin) {
     const cap = document.createElement('div');
@@ -1092,6 +1119,8 @@ function renderFreeEditor(){
     cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:5; font-family:Caveat,cursive; font-size:18px; color:'+(f.accent||'#E9A6BC')+'; pointer-events:none;';
     wrap.appendChild(cap);
   }
+
+  wrap.appendChild(layer);
 
   if(state.finalReady) {
     renderFinalCanvas();
