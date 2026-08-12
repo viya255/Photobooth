@@ -94,15 +94,26 @@
   .overlay.show{display:flex;}
   .review-card{background:white; border-radius:24px; padding:20px; max-width:420px; width:100%; box-shadow:var(--shadow); text-align:center;}
   .review-card img{width:100%; border-radius:16px; margin-bottom:16px;}
+  
   .frame-gallery{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; margin-top:8px;}
-  .frame-thumb{border-radius:16px; overflow:hidden; cursor:pointer; border:3px solid transparent; position:relative; aspect-ratio:2/5; display:flex; align-items:center; justify-content:center; font-size:11px; text-align:center; padding:6px;}
+  .frame-thumb{border-radius:16px; overflow:hidden; cursor:pointer; border:3px solid transparent; position:relative; aspect-ratio:2/5; display:flex; align-items:center; justify-content:center; font-size:11px; text-align:center; padding:6px; background-position:center; background-size:cover;}
   .frame-thumb.selected{border-color:var(--pink-deep); box-shadow:0 0 0 3px rgba(233,166,188,.35);}
   .frame-thumb span.label{position:absolute; bottom:4px; left:4px; right:4px; background:rgba(255,255,255,.85); border-radius:8px; padding:2px 4px; font-weight:700; color:var(--plum);}
-  .frame-thumb .del-btn{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:var(--danger); color:white; border:none; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+  .frame-thumb .del-btn{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:var(--danger); color:white; border:none; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2;}
   .upload-frame-tile{border:2px dashed var(--pink-deep); border-radius:16px; aspect-ratio:2/5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--pink-deep); font-size:12px; font-weight:700; background:var(--pink);}
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   
-  /* Strip Preview Editor Interaktif */
+  /* EDITOR AREA UTAMA */
+  .editor-workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    margin: 16px 0;
+  }
+
+  /* Canvas Editor Frame */
   .strip-preview {
     width: 220px;
     height: 550px;
@@ -111,38 +122,97 @@
     overflow: hidden;
     box-shadow: var(--shadow);
     background: #ffffff;
-    margin: 0 auto;
+    flex-shrink: 0;
+    touch-action: none;
+    user-select: none;
   }
 
-  .strip-preview .slot-container {
+  /* Container foto-foto */
+  .free-photo-layer {
     position: absolute;
     inset: 0;
     z-index: 1;
+    touch-action: none;
   }
 
-  .strip-preview .slot {
+  .placed-photo {
     position: absolute;
-    overflow: hidden;
     cursor: move;
+    user-select: none;
+    touch-action: none;
+    z-index: 2;
   }
 
-  .strip-preview .slot img {
+  .placed-photo img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     pointer-events: none;
-    transform-origin: center;
-    user-select: none;
+    display: block;
   }
 
+  .placed-photo .photo-del-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--danger);
+    color: white;
+    border: none;
+    font-size: 11px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    pointer-events: auto;
+  }
+
+  .placed-photo:hover .photo-del-btn,
+  .placed-photo.selected .photo-del-btn {
+    display: flex;
+  }
+
+  .placed-photo.selected {
+    outline: 2px dashed var(--pink-deep);
+  }
+
+  /* Overlay Frame - DIBUAT DENGAN pointer-events: none AGAR BISA KLIK FOTO DI BAWAHNYA */
   .strip-preview .frame-overlay-img {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: fill;
-    pointer-events: none;
+    pointer-events: none !important;
     z-index: 10;
+  }
+
+  /* Mini Frame Switcher di Editor */
+  .frame-mini-selector {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 380px;
+    padding: 8px 4px;
+  }
+  .frame-mini-card {
+    min-width: 65px;
+    height: 110px;
+    border-radius: 10px;
+    border: 2px solid var(--pink);
+    cursor: pointer;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .frame-mini-card.selected {
+    border-color: var(--pink-deep);
+    box-shadow: 0 0 0 3px rgba(233,166,188,0.5);
   }
 
   #finalCanvas{max-width:220px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;}
@@ -233,7 +303,7 @@
 <div class="screen active" id="screen-start">
   <div class="card">
     <h2 style="margin-bottom:6px;">Mulai sesi foto</h2>
-    <p class="lead">Pilih jumlah foto, ambil gambar, lalu pilih frame kesukaanmu. ✿</p>
+    <p class="lead">Pilih berapa kali kamu ingin memotret, lalu pilih frame kesukaanmu. ✿</p>
     
     <div class="start-grid">
       <div class="start-option" id="optBuiltin">
@@ -248,10 +318,10 @@
 
     <!-- PILIHAN JUMLAH FOTO -->
     <div class="photo-count-selector" style="margin-top: 20px; text-align: center;">
-      <label style="font-weight: 700; display: block; margin-bottom: 8px;">Pilih Jumlah Foto:</label>
+      <label style="font-weight: 700; display: block; margin-bottom: 8px;">Target Jepretan Foto:</label>
       <div class="btn-row" style="margin-top: 0;">
-        <button class="btn btn-ghost photo-count-btn active" data-count="3" type="button">3 Foto</button>
-        <button class="btn btn-ghost photo-count-btn" data-count="4" type="button">4 Foto</button>
+        <button class="btn btn-ghost photo-count-btn active" data-count="3" type="button">3 Jepretan</button>
+        <button class="btn btn-ghost photo-count-btn" data-count="4" type="button">4 Jepretan</button>
       </div>
     </div>
 
@@ -301,7 +371,7 @@
   <div class="shots-row" id="shotsRow"></div>
 </div>
 
-<!-- BE THE CAMERA (TAMPILAN KHUSUS DI HP KAMERA) -->
+<!-- BE THE CAMERA -->
 <div class="screen" id="screen-be-camera">
   <div class="card" style="text-align:center;">
     <h2>📷 Kamera Photobooth</h2>
@@ -317,7 +387,7 @@
   <div class="stepper"><div class="dot done">📷</div><div class="dot now">🖼️</div><div class="dot">✓</div></div>
   <div class="card">
     <h2>Pilih frame favoritmu</h2>
-    <p class="lead">Pilih frame yang kamu sukai untuk foto-fotomu.</p>
+    <p class="lead" id="frameSelectLead">Menampilkan frame yang sesuai pilihan jepretan.</p>
     <div class="frame-gallery" id="frameGallery"></div>
 
     <div class="btn-row">
@@ -332,6 +402,12 @@
   <div class="card">
     <h2 style="margin-bottom:6px;">Kelola Frame</h2>
     <p class="lead">Tambah atau hapus frame pilihan kamu.</p>
+    
+    <div style="text-align:center; margin-bottom:12px;">
+      <button class="btn btn-ghost manage-filter-btn active" data-slots="3" type="button">Frame 3 Jepretan</button>
+      <button class="btn btn-ghost manage-filter-btn" data-slots="4" type="button">Frame 4 Jepretan</button>
+    </div>
+
     <div class="frame-gallery" id="manageFrameGallery"></div>
     <input type="file" id="frameUpload" accept="image/png,image/jpeg" style="display:none;">
     <div class="frame-size-note" id="frameSizeNote"></div>
@@ -349,21 +425,28 @@
   </div>
 </div>
 
-<!-- FINAL -->
+<!-- FINAL (EDITOR ATUR FOTO LANGSUNG) -->
 <div class="screen" id="screen-final">
   <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
   <div class="card" style="text-align:center;">
     <h2>Selesai! Cantik sekali ✨</h2>
-    <p class="lead">Atur & geser posisi foto di dalam frame, lalu simpan, cetak, atau kirim ke HP kamu.</p>
+    <p class="lead">Klik/sentuh foto di frame untuk menggeser. Pilih frame lain di bawah jika ingin mengganti style.</p>
 
-    <!-- Editor Interaktif Langsung di Menu Final -->
-    <div style="display:flex; flex-direction:column; align-items:center; gap:16px; margin:20px 0;">
+    <!-- Editor Workspace -->
+    <div class="editor-workspace">
+      <!-- Canvas Frame Area -->
       <div class="strip-preview" id="stripPreviewFinal"></div>
+
+      <!-- Pemilih Mini Frame Langsung -->
+      <div style="width:100%; max-width:380px; text-align:left;">
+        <label style="font-size:12px; font-weight:700; color:var(--plum);">🖼️ Ganti Frame:</label>
+        <div class="frame-mini-selector" id="editorFrameSelector"></div>
+      </div>
       
-      <div class="photo-controls" style="width:100%; max-width:320px; background:var(--cream); padding:14px; border-radius:16px; border:1px solid var(--pink-deep); text-align:left;">
-        <label style="font-size:13px; font-weight:700; display:block; margin-bottom:6px;">🔍 Zoom Foto:</label>
-        <input type="range" id="zoomSlider" min="0.8" max="2" step="0.05" value="1" style="width:100%;">
-        <p style="font-size:11px; color:var(--plum-soft); margin:6px 0 0; text-align:center;">💡 Tahan & geser foto pada gambar di atas untuk menyesuaikan posisinya di dalam frame.</p>
+      <!-- Controls slider ukuran foto aktif -->
+      <div class="photo-controls" style="width:100%; max-width:380px; background:var(--cream); padding:12px 14px; border-radius:16px; border:1px solid var(--pink-deep); text-align:left;">
+        <label style="font-size:12px; font-weight:700; display:block; margin-bottom:4px;">🔍 Ukuran Foto Aktif:</label>
+        <input type="range" id="sizeSlider" min="0.4" max="2.5" step="0.05" value="1" style="width:100%;">
       </div>
     </div>
 
@@ -426,46 +509,13 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script>
-/* ===================== LAYOUT ===================== */
-function getDynamicLayout(photoCount) {
-  const W = 1200;
-  const H = 3000;
-  
-  if (photoCount === 3) {
-    const photoW = 920;
-    const photoH = 690;
-    const x = (W - photoW) / 2;
-    const startY = 160;
-    const gap = 150;
-    const positions = [
-      { x, y: startY, w: photoW, h: photoH },
-      { x, y: startY + photoH + gap, w: photoW, h: photoH },
-      { x, y: startY + (photoH + gap) * 2, w: photoW, h: photoH }
-    ];
-    return { W, H, photoW, photoH, positions };
-  } else {
-    const photoW = 860;
-    const photoH = 625;
-    const x = (W - photoW) / 2;
-    const startY = 90;
-    const gap = 50;
-    const positions = [
-      { x, y: startY, w: photoW, h: photoH },
-      { x, y: startY + photoH + gap, w: photoW, h: photoH },
-      { x, y: startY + (photoH + gap) * 2, w: photoW, h: photoH },
-      { x, y: startY + (photoH + gap) * 3, w: photoW, h: photoH }
-    ];
-    return { W, H, photoW, photoH, positions };
-  }
-}
 const HISTORY_KEY = 'petalBoothHistory';
+const FRAMES_KEY = 'petalBoothCustomFrames';
 const HISTORY_MAX = 20;
 
-/* ===================== MODE MINIMAL ===================== */
 function setMinimalMode(enable){
   if(enable){
     document.body.classList.add('minimal-mode');
@@ -474,7 +524,6 @@ function setMinimalMode(enable){
   }
 }
 
-/* ===================== QR HELPER ===================== */
 function qrImageUrl(data, size){
   try {
     if (typeof qrcode === 'function') {
@@ -489,27 +538,43 @@ function qrImageUrl(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
-/* ===================== STATE ===================== */
+/* STATE UTAMA */
 const state = {
-  camSource:'builtin', stream:null, photos:[], order:[0,1,2,3], maxPhotos: 4,
+  camSource:'builtin', stream:null, photos:[], maxPhotos: 3,
   mirror:true,
   frames:[
-    {id:'f1', name:'Pita Merah Muda', color:'#F9E1EA', accent:'#E9A6BC', emoji:'🎀', builtin:true},
-    {id:'f2', name:'Bunga Lavender', color:'#E7DEF9', accent:'#B9A3E3', emoji:'🌸', builtin:true},
-    {id:'f3', name:'Taman Mint', color:'#DFF3E7', accent:'#8FCBA6', emoji:'🌿', builtin:true},
-    {id:'f4', name:'Kilau Emas', color:'#FFF3DC', accent:'#D9B26E', emoji:'✨', builtin:true},
+    {id:'f1_3', slots:3, name:'Pita Merah Muda (3)', color:'#F9E1EA', accent:'#E9A6BC', emoji:'🎀', builtin:true},
+    {id:'f2_3', slots:3, name:'Bunga Lavender (3)', color:'#E7DEF9', accent:'#B9A3E3', emoji:'🌸', builtin:true},
+    {id:'f3_4', slots:4, name:'Taman Mint (4)', color:'#DFF3E7', accent:'#8FCBA6', emoji:'🌿', builtin:true},
+    {id:'f4_4', slots:4, name:'Kilau Emas (4)', color:'#FFF3DC', accent:'#D9B26E', emoji:'✨', builtin:true},
   ],
-  selectedFrame:null, pendingShot:null, sortable:null,
+  selectedFrame:null, pendingShot:null,
   hostPeer:null, hostPeerId:null,
   camPeer:null, camCall:null,
   finalReady:false,
   history:[],
+  manageFilterSlots: 3
 };
 
-let photoOffsets = [{x:0, y:0}, {x:0, y:0}, {x:0, y:0}, {x:0, y:0}];
-let currentZoom = 1;
+function loadStoredFrames(){
+  try {
+    const saved = localStorage.getItem(FRAMES_KEY);
+    if(saved){
+      const customFrames = JSON.parse(saved);
+      state.frames = [...state.frames, ...customFrames];
+    }
+  } catch(e){}
+}
+function saveCustomFrames(){
+  try {
+    const custom = state.frames.filter(f => !f.builtin);
+    localStorage.setItem(FRAMES_KEY, JSON.stringify(custom));
+  } catch(e){}
+}
 
-/* ===================== NAV ===================== */
+let placedPhotos = [];
+let selectedPlacedPhotoId = null;
+
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -523,7 +588,7 @@ document.getElementById('homeBtn').onclick = ()=>{ setMinimalMode(false); fullCl
 document.getElementById('brandClick').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
 document.getElementById('retrieveNavBtn').onclick = ()=>{ showScreen('screen-retrieve'); };
 
-/* ===================== START SCREEN ===================== */
+/* START SCREEN */
 let chosenSource='builtin';
 document.getElementById('optBuiltin').onclick=()=>{ chosenSource='builtin'; highlightOpt('optBuiltin'); };
 document.getElementById('optPhone').onclick=()=>{ chosenSource='phone'; highlightOpt('optPhone'); };
@@ -544,7 +609,7 @@ document.getElementById('startBtn').onclick=()=>{
   switchSource(chosenSource==='phone' ? 'phone' : 'builtin');
 };
 
-/* ===================== CAPTURE SCREEN ===================== */
+/* CAPTURE SCREEN */
 const videoEl = document.getElementById('video');
 document.getElementById('srcBuiltinBtn').onclick=()=>switchSource('builtin');
 document.getElementById('srcPhoneBtn').onclick=()=>switchSource('phone');
@@ -739,9 +804,6 @@ document.getElementById('keepBtn').onclick=()=>{
     stopCamera();
     if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
     setTimeout(()=>{ 
-      state.order = Array.from({length: state.maxPhotos}, (_, i) => i);
-      photoOffsets = Array.from({length: state.maxPhotos}, () => ({x:0, y:0}));
-      currentZoom = 1;
       buildFrameGallery(); 
       showScreen('screen-frame'); 
     },500);
@@ -760,12 +822,24 @@ function renderShotsRow(){
 }
 document.getElementById('backToCaptureBtn').onclick=()=>{ showScreen('screen-capture'); switchSource(state.camSource); };
 
-/* ===================== FRAME SCREEN ===================== */
+/* FRAME SCREEN */
 function buildFrameGallery(){
   const gal = document.getElementById('frameGallery'); 
   gal.innerHTML = '';
   
-  state.frames.forEach(f => {
+  const filteredFrames = state.frames.filter(f => f.slots === state.maxPhotos);
+  document.getElementById('frameSelectLead').textContent = `Menampilkan koleksi frame khusus untuk ${state.maxPhotos} jepretan. ✿`;
+
+  if(filteredFrames.length === 0){
+    gal.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--plum-soft);">Belum ada frame khusus ${state.maxPhotos} jepretan. Silakan tambah via Kelola Frame.</div>`;
+    return;
+  }
+
+  if (!state.selectedFrame || state.selectedFrame.slots !== state.maxPhotos) {
+    state.selectedFrame = filteredFrames[0];
+  }
+
+  filteredFrames.forEach(f => {
     const el = document.createElement('div');
     el.className = 'frame-thumb' + (state.selectedFrame && state.selectedFrame.id === f.id ? ' selected' : '');
     
@@ -784,17 +858,26 @@ function buildFrameGallery(){
     };
     gal.appendChild(el);
   });
-
-  if (!state.selectedFrame) state.selectedFrame = state.frames[0];
 }
 
-/* ===================== KELOLA FRAME ===================== */
+/* KELOLA FRAME */
+document.querySelectorAll('.manage-filter-btn').forEach(btn => {
+  btn.onclick = (e) => {
+    document.querySelectorAll('.manage-filter-btn').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    state.manageFilterSlots = parseInt(e.currentTarget.dataset.slots);
+    buildManageFrameGallery();
+  };
+});
+
 document.getElementById('manageFramesBtn').onclick=()=>{ buildManageFrameGallery(); showScreen('screen-manage-frames'); };
 document.getElementById('backFromManageBtn').onclick=()=>{ showScreen('screen-start'); };
 
 function buildManageFrameGallery(){
   const gal=document.getElementById('manageFrameGallery'); gal.innerHTML='';
-  state.frames.forEach(f=>{
+  const filtered = state.frames.filter(f => f.slots === state.manageFilterSlots);
+
+  filtered.forEach(f=>{
     const el=document.createElement('div');
     el.className='frame-thumb';
     if(f.builtin){
@@ -809,41 +892,110 @@ function buildManageFrameGallery(){
         ev.stopPropagation();
         state.frames = state.frames.filter(x=>x.id!==f.id);
         if(state.selectedFrame && state.selectedFrame.id===f.id) state.selectedFrame=null;
+        saveCustomFrames();
         buildManageFrameGallery();
       };
       el.appendChild(del);
     }
     gal.appendChild(el);
   });
+
   const uploadTile=document.createElement('div');
   uploadTile.className='upload-frame-tile';
-  uploadTile.innerHTML='<span style="font-size:20px;">➕</span><span>Upload Frame</span>';
+  uploadTile.innerHTML=`<span style="font-size:20px;">➕</span><span>Upload Frame (${state.manageFilterSlots} Jepretan)</span>`;
   uploadTile.onclick=()=>document.getElementById('frameUpload').click();
   gal.appendChild(uploadTile);
 
   document.getElementById('frameSizeNote').innerHTML =
-  `Ukuran frame custom (6x15 HD): <b>1200 × 3000px</b>, PNG transparan.`;
+  `Ukuran frame custom (6x15 HD): <b>1200 × 3000px</b>, PNG transparan. Upload ini akan masuk ke kategori <b>${state.manageFilterSlots} Jepretan</b>.`;
 }
+
 document.getElementById('frameUpload').onchange=(e)=>{
   const file=e.target.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=()=>{
-    const f={id:'custom-'+Date.now(), name:'Frame Kamu', dataUrl:reader.result, builtin:false};
+    const f={
+      id:'custom-'+Date.now(), 
+      slots: state.manageFilterSlots,
+      name:`Custom (${state.manageFilterSlots} Shot)`, 
+      dataUrl:reader.result, 
+      builtin:false
+    };
     state.frames.push(f);
+    saveCustomFrames();
     buildManageFrameGallery();
   };
   reader.readAsDataURL(file);
   e.target.value='';
 };
 
-/* ===================== STRIP PREVIEW INTERAKTIF ===================== */
-function buildStripPreviewFinal(){
+/* EDITOR OTOMATIS PLACEMENT & GESER LANGSUNG */
+
+function setupEditorWorkspace(){
+  placedPhotos = [];
+  selectedPlacedPhotoId = null;
+
+  const previewW = 220;
+  const photoW = 165;
+  const photoH = state.maxPhotos === 3 ? 120 : 95;
+  const startY = state.maxPhotos === 3 ? 40 : 30;
+  const gapY = state.maxPhotos === 3 ? 140 : 110;
+
+  state.photos.forEach((photoSrc, idx) => {
+    const defaultY = startY + idx * gapY;
+    const defaultX = (previewW - photoW) / 2;
+    placedPhotos.push({
+      id: 'p-' + Date.now() + '-' + idx,
+      photoIdx: idx,
+      src: photoSrc,
+      x: defaultX,
+      y: defaultY,
+      w: photoW,
+      h: photoH,
+      scale: 1.0
+    });
+  });
+
+  if(placedPhotos.length > 0) {
+    selectedPlacedPhotoId = placedPhotos[0].id;
+  }
+
+  buildEditorFrameSelector();
+  renderFreeEditor();
+}
+
+/* Pemilih Frame Cepat Langsung dari Layar Editor Final */
+function buildEditorFrameSelector(){
+  const wrap = document.getElementById('editorFrameSelector');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+
+  const filtered = state.frames.filter(f => f.slots === state.maxPhotos);
+  filtered.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'frame-mini-card' + (state.selectedFrame && state.selectedFrame.id === f.id ? ' selected' : '');
+    
+    if(f.builtin){
+      card.style.background = `linear-gradient(160deg, ${f.color}, white)`;
+      card.innerHTML = `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:20px;">${f.emoji}</div>`;
+    } else {
+      card.style.backgroundImage = `url(${f.dataUrl})`;
+    }
+
+    card.onclick = () => {
+      state.selectedFrame = f;
+      buildEditorFrameSelector();
+      renderFreeEditor();
+    };
+    wrap.appendChild(card);
+  });
+}
+
+function renderFreeEditor(){
   const wrap = document.getElementById('stripPreviewFinal');
   if(!wrap) return;
 
   const f = state.selectedFrame || state.frames[0];
-  const layout = getDynamicLayout(state.photos.length);
-
   wrap.innerHTML = '';
 
   if (f.builtin) {
@@ -852,58 +1004,83 @@ function buildStripPreviewFinal(){
     wrap.style.background = '#ffffff';
   }
 
-  const slotContainer = document.createElement('div');
-  slotContainer.className = 'slot-container';
+  const layer = document.createElement('div');
+  layer.className = 'free-photo-layer';
 
-  state.order.forEach((photoIdx, i) => {
-    const slot = document.createElement('div');
-    slot.className = 'slot';
-    slot.dataset.index = i;
+  placedPhotos.forEach((item) => {
+    const el = document.createElement('div');
+    el.className = 'placed-photo' + (selectedPlacedPhotoId === item.id ? ' selected' : '');
+    
+    const curW = item.w * item.scale;
+    const curH = item.h * item.scale;
 
-    const pos = layout.positions[i];
-    slot.style.left = (pos.x / layout.W * 100) + '%';
-    slot.style.top = (pos.y / layout.H * 100) + '%';
-    slot.style.width = (pos.w / layout.W * 100) + '%';
-    slot.style.height = (pos.h / layout.H * 100) + '%';
+    el.style.left = item.x + 'px';
+    el.style.top = item.y + 'px';
+    el.style.width = curW + 'px';
+    el.style.height = curH + 'px';
 
     const img = document.createElement('img');
-    img.src = state.photos[photoIdx];
-    
-    const offset = photoOffsets[i] || {x:0, y:0};
-    img.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${currentZoom})`;
+    img.src = item.src;
+    el.appendChild(img);
 
-    slot.appendChild(img);
-    slotContainer.appendChild(slot);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'photo-del-btn';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Hapus dari frame';
+    delBtn.onclick = (ev) => {
+      ev.stopPropagation();
+      placedPhotos = placedPhotos.filter(x => x.id !== item.id);
+      if(selectedPlacedPhotoId === item.id) selectedPlacedPhotoId = null;
+      renderFreeEditor();
+      if(state.finalReady) renderFinalCanvas();
+    };
+    el.appendChild(delBtn);
 
+    /* Event Pointer (Geser / Drag) */
     let isDragging = false, startX = 0, startY = 0;
-    
-    slot.addEventListener('pointerdown', (e) => {
-      isDragging = true;
-      startX = e.clientX - (photoOffsets[i]?.x || 0);
-      startY = e.clientY - (photoOffsets[i]?.y || 0);
-      slot.setPointerCapture(e.pointerId);
-    });
 
-    slot.addEventListener('pointermove', (e) => {
-      if (!isDragging) return;
-      photoOffsets[i] = {
-        x: e.clientX - startX,
-        y: e.clientY - startY
-      };
-      img.style.transform = `translate(${photoOffsets[i].x}px, ${photoOffsets[i].y}px) scale(${currentZoom})`;
+    const startDrag = (e) => {
+      if(e.target.classList.contains('photo-del-btn')) return;
+      isDragging = true;
+      startX = e.clientX - item.x;
+      startY = e.clientY - item.y;
+      selectedPlacedPhotoId = item.id;
       
+      const slider = document.getElementById('sizeSlider');
+      if(slider) slider.value = item.scale;
+
+      renderFreeEditor();
+      try { el.setPointerCapture(e.pointerId); } catch(err){}
+    };
+
+    const doDrag = (e) => {
+      if (!isDragging) return;
+      item.x = e.clientX - startX;
+      item.y = e.clientY - startY;
+      el.style.left = item.x + 'px';
+      el.style.top = item.y + 'px';
+
       if(state.finalReady) {
         renderFinalCanvas();
       }
-    });
+    };
 
-    const stopDrag = () => { isDragging = false; };
-    slot.addEventListener('pointerup', stopDrag);
-    slot.addEventListener('pointercancel', stopDrag);
+    const stopDrag = (e) => { 
+      isDragging = false; 
+      try { el.releasePointerCapture(e.pointerId); } catch(err){}
+    };
+
+    el.addEventListener('pointerdown', startDrag);
+    el.addEventListener('pointermove', doDrag);
+    el.addEventListener('pointerup', stopDrag);
+    el.addEventListener('pointercancel', stopDrag);
+
+    layer.appendChild(el);
   });
 
-  wrap.appendChild(slotContainer);
+  wrap.appendChild(layer);
 
+  /* Layer Frame Overlay - DIJAMIN pointer-events: none */
   if (!f.builtin && f.dataUrl) {
     const frameOverlay = document.createElement('img');
     frameOverlay.className = 'frame-overlay-img';
@@ -912,16 +1089,23 @@ function buildStripPreviewFinal(){
   } else if (f.builtin) {
     const cap = document.createElement('div');
     cap.textContent = '✿ Petal Booth ✿';
-    cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:5; font-family:Caveat,cursive; font-size:18px; color:'+(f.accent||'#E9A6BC')+';';
+    cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:5; font-family:Caveat,cursive; font-size:18px; color:'+(f.accent||'#E9A6BC')+'; pointer-events:none;';
     wrap.appendChild(cap);
+  }
+
+  if(state.finalReady) {
+    renderFinalCanvas();
   }
 }
 
-document.getElementById('zoomSlider').oninput = (e) => {
-  currentZoom = parseFloat(e.target.value);
-  buildStripPreviewFinal();
-  if(state.finalReady) {
-    renderFinalCanvas();
+document.getElementById('sizeSlider').oninput = (e) => {
+  const newScale = parseFloat(e.target.value);
+  if(selectedPlacedPhotoId) {
+    const target = placedPhotos.find(x => x.id === selectedPlacedPhotoId);
+    if(target) {
+      target.scale = newScale;
+      renderFreeEditor();
+    }
   }
 };
 
@@ -934,7 +1118,7 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   document.getElementById('qrWrap').style.display='none';
   state.finalReady=false;
 
-  buildStripPreviewFinal();
+  setupEditorWorkspace();
 
   try{
     await renderFinalCanvas();
@@ -950,15 +1134,17 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   }
 };
 
-/* ===================== FINAL CANVAS ===================== */
+/* RENDERING FINAL CANVAS */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
     const canvas=document.getElementById('finalCanvas');
     const ctx=canvas.getContext('2d');
 
-    const layout = getDynamicLayout(state.photos.length);
-    const {W,H,positions} = layout;
-    
+    const W = 1200;
+    const H = 3000;
+    const previewW = 220;
+    const scaleFactor = W / previewW;
+
     canvas.width=W; canvas.height=H;
     const f=state.selectedFrame||state.frames[0];
 
@@ -971,45 +1157,35 @@ function renderFinalCanvas(){
       ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
     }
 
-    let loaded=0; const total=state.photos.length; let failed=false;
-    state.order.forEach((photoIdx, slotI)=>{
-      const im=new Image();
-      im.onload=()=>{
+    if(placedPhotos.length === 0) {
+      if(!f.builtin && f.dataUrl){
+        const overlay=new Image();
+        overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); resolve(); };
+        overlay.onerror=()=>{ resolve(); };
+        overlay.src=f.dataUrl;
+      } else {
+        finishCanvasFooter(ctx,W,H,f);
+        resolve();
+      }
+      return;
+    }
+
+    let loaded=0; const total=placedPhotos.length; let failed=false;
+    
+    placedPhotos.forEach((item) => {
+      const im = new Image();
+      im.onload = () => {
         if(failed) return;
-        const pos = layout.positions[slotI];
-        const px = pos.x, py = pos.y, pw = pos.w, ph = pos.h;
 
-        const previewW = 220; 
-        const scaleFactor = W / previewW;
+        const renderX = item.x * scaleFactor;
+        const renderY = item.y * scaleFactor;
+        const renderW = item.w * item.scale * scaleFactor;
+        const renderH = item.h * item.scale * scaleFactor;
 
-        const offset = photoOffsets[slotI] || {x:0, y:0};
-        const offsetX = offset.x * scaleFactor;
-        const offsetY = offset.y * scaleFactor;
-
-        const baseScale = Math.max(pw/im.width, ph/im.height);
-        const scale = baseScale * currentZoom;
-        
-        const dw = im.width * scale;
-        const dh = im.height * scale;
-        const dx = px + (pw - dw) / 2 + offsetX;
-        const dy = py + (ph - dh) / 2 + offsetY;
-
-        ctx.save(); 
-        ctx.beginPath(); 
-        ctx.rect(px, py, pw, ph); 
-        ctx.clip();
-        ctx.drawImage(im, dx, dy, dw, dh); 
-        ctx.restore();
-
-        if (f.builtin) {
-          ctx.strokeStyle='#ffffff'; 
-          ctx.lineWidth=8; 
-          roundRect(ctx, px, py, pw, ph, 16); 
-          ctx.stroke();
-        }
+        ctx.drawImage(im, renderX, renderY, renderW, renderH);
 
         loaded++;
-        if(loaded===total){
+        if(loaded === total){
           if(!f.builtin && f.dataUrl){
             const overlay=new Image();
             overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); resolve(); };
@@ -1021,8 +1197,11 @@ function renderFinalCanvas(){
           }
         }
       };
-      im.onerror=()=>{ failed=true; reject(new Error('Salah satu foto gagal dimuat.')); };
-      im.src=state.photos[photoIdx];
+      im.onerror = () => {
+        failed = true;
+        reject(new Error('Salah satu foto gagal dimuat.'));
+      };
+      im.src = item.src;
     });
   });
 }
@@ -1033,12 +1212,6 @@ function finishCanvasFooter(ctx,W,H,f){
   ctx.font="30px 'Quicksand', sans-serif"; ctx.fillStyle='#8A7594';
   const dateStr=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
   ctx.fillText(dateStr, W/2, H-24);
-}
-
-function roundRect(ctx,x,y,w,h,r){
-  ctx.beginPath(); ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 
 function safeDataUrl(){
@@ -1062,14 +1235,16 @@ document.getElementById('printBtn').onclick=()=>{
   setTimeout(()=>window.print(), 120);
 };
 document.getElementById('newSessionBtn').onclick=()=>{
-  state.photos=[]; state.order=Array.from({length: state.maxPhotos}, (_, i) => i); state.selectedFrame=null;
+  state.photos=[]; state.selectedFrame=null;
+  placedPhotos = [];
+  selectedPlacedPhotoId = null;
   document.getElementById('codeBox').style.display='none';
   document.getElementById('qrWrap').style.display='none';
   if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
   showScreen('screen-start');
 };
 
-/* ===================== KIRIM FOTO KE HP PELANGGAN ===================== */
+/* KIRIM FOTO KE HP PELANGGAN */
 function showSendReady(){
   document.getElementById('qrWrap').style.display='inline-block';
   document.getElementById('codeBoxText').innerHTML =
@@ -1144,7 +1319,7 @@ document.getElementById('sendRetryBtn').onclick=()=>{
   sendToPhone();
 };
 
-/* ===================== TERIMA FOTO DI HP PELANGGAN ===================== */
+/* TERIMA FOTO DI HP PELANGGAN */
 function connectToHost(hostId, statusElId, resultElId){
   const statusEl=document.getElementById(statusElId), resultEl=document.getElementById(resultElId);
   statusEl.textContent='Menyambungkan ke photobooth…'; statusEl.classList.remove('error');
@@ -1182,7 +1357,7 @@ document.getElementById('backToFinalBtn').onclick = () => {
   }
 };
 
-/* ===================== JADI KAMERA HP ===================== */
+/* JADI KAMERA HP */
 function setupBeCamera(hostId){
   setMinimalMode(true);
   showScreen('screen-be-camera');
@@ -1209,7 +1384,7 @@ function setupBeCamera(hostId){
   };
 }
 
-/* ===================== RIWAYAT ===================== */
+/* RIWAYAT */
 function loadHistory(){
   try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }
   catch(e){ return []; }
@@ -1354,7 +1529,7 @@ document.getElementById('historyNavBtn').onclick=()=>{ renderHistoryFull(); show
 document.getElementById('historyFab').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
 document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-start'); };
 
-/* ===================== AUTO-DETECT QUERY PARAM ===================== */
+/* AUTO-DETECT QUERY PARAM */
 (function initFromQuery(){
   const params=new URLSearchParams(location.search);
   const receiveId=params.get('receive');
@@ -1372,6 +1547,7 @@ document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-s
 })();
 
 /* init */
+loadStoredFrames();
 highlightOpt('optBuiltin');
 updateMirrorUI();
 state.history = loadHistory();
