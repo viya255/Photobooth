@@ -25,7 +25,6 @@
     display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
   }
   
-  /* Sembunyikan elemen utama jika HP sedang dalam mode Kamera / Mode Terima Foto */
   body.minimal-mode .top-nav,
   body.minimal-mode .brand,
   body.minimal-mode .history-scatter,
@@ -58,7 +57,6 @@
     color: white !important;
     border-color: var(--pink-deep) !important;
   }
-  .btn-ghost.active{background:var(--pink-deep); color:white; border-color:var(--pink-deep);}
   .btn-soft{background:var(--mint); color:var(--plum);}
   .btn-danger{background:var(--white); color:var(--danger); border:2px solid var(--danger);}
   .btn-row{display:flex; gap:12px; margin-top:20px; flex-wrap:wrap; justify-content:center;}
@@ -96,9 +94,6 @@
   .overlay.show{display:flex;}
   .review-card{background:white; border-radius:24px; padding:20px; max-width:420px; width:100%; box-shadow:var(--shadow); text-align:center;}
   .review-card img{width:100%; border-radius:16px; margin-bottom:16px;}
-  .frame-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;}
-  .lock-toggle{font-size:12px; font-weight:700; border:none; border-radius:999px; padding:7px 14px; cursor:pointer; background:var(--pink); color:var(--pink-deep);}
-  .lock-toggle.unlocked{background:var(--mint); color:#3f7a58;}
   .frame-gallery{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; margin-top:8px;}
   .frame-thumb{border-radius:16px; overflow:hidden; cursor:pointer; border:3px solid transparent; position:relative; aspect-ratio:2/5; display:flex; align-items:center; justify-content:center; font-size:11px; text-align:center; padding:6px;}
   .frame-thumb.selected{border-color:var(--pink-deep); box-shadow:0 0 0 3px rgba(233,166,188,.35);}
@@ -106,55 +101,50 @@
   .frame-thumb .del-btn{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:var(--danger); color:white; border:none; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;}
   .upload-frame-tile{border:2px dashed var(--pink-deep); border-radius:16px; aspect-ratio:2/5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--pink-deep); font-size:12px; font-weight:700; background:var(--pink);}
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
-  .strip-editor{display:flex; gap:24px; width:100%; margin-top:22px; flex-wrap:wrap; justify-content:center;}
+  
+  /* Strip Preview Editor Interaktif */
   .strip-preview {
-  width: 200px;
-  aspect-ratio: 2/5;
-  border-radius: 14px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  background: #ffffff;
-}
+    width: 220px;
+    height: 550px;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    background: #ffffff;
+    margin: 0 auto;
+  }
 
-.strip-preview .slot-container {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  z-index: 1; /* Di bawah frame */
-}
+  .strip-preview .slot-container {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
 
-.strip-preview .slot {
-  flex: 1;
-  width: 100%;
-  overflow: hidden;
-  position: relative;
-  cursor: move;
-}
+  .strip-preview .slot {
+    position: absolute;
+    overflow: hidden;
+    cursor: move;
+  }
 
-.strip-preview .slot img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-  transform-origin: center;
-  transition: transform 0.05s linear;
-}
+  .strip-preview .slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    transform-origin: center;
+    user-select: none;
+  }
 
-/* Gambar Frame selalu menutupi di atas foto */
-.strip-preview::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: var(--frame-overlay, none);
-  background-size: 100% 100%;
-  background-position: center;
-  pointer-events: none; /* Klik tembus ke foto di bawahnya */
-  z-index: 10; /* Berada di atas foto */
-}
-  .editor-hint{flex:1; min-width:180px;}
-  .editor-hint ul{padding-left:18px; color:var(--plum-soft); font-size:13.5px; line-height:1.8;}
+  .strip-preview .frame-overlay-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    z-index: 10;
+  }
+
   #finalCanvas{max-width:220px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;}
   .code-box{background:var(--lavender); border-radius:16px; padding:18px 20px; text-align:center; margin-top:16px; width:100%;}
   .code-box p{margin:10px 0 0; font-size:13px; color:var(--plum-soft);}
@@ -170,7 +160,7 @@
   .status-msg{font-size:13px; color:var(--plum-soft); margin-top:10px; min-height:16px; text-align:center;}
   .status-msg.error{color:var(--danger); font-weight:700;}
 
-  /* ---- Riwayat ---- */
+  /* Riwayat */
   .history-scatter{position:fixed; top:96px; bottom:96px; width:210px; pointer-events:none; z-index:15;}
   .history-scatter.left{left:0;}
   .history-scatter.right{right:0;}
@@ -256,7 +246,7 @@
       </div>
     </div>
 
-    <!-- TARUH PILIHAN JUMLAH FOTO DI SINI -->
+    <!-- PILIHAN JUMLAH FOTO -->
     <div class="photo-count-selector" style="margin-top: 20px; text-align: center;">
       <label style="font-weight: 700; display: block; margin-bottom: 8px;">Pilih Jumlah Foto:</label>
       <div class="btn-row" style="margin-top: 0;">
@@ -322,25 +312,13 @@
   </div>
 </div>
 
-<!-- FRAME + EDIT -->
-<!-- FRAME + EDIT -->
+<!-- FRAME -->
 <div class="screen" id="screen-frame">
   <div class="stepper"><div class="dot done">📷</div><div class="dot now">🖼️</div><div class="dot">✓</div></div>
   <div class="card">
     <h2>Pilih frame favoritmu</h2>
-    <p class="lead">Pilih frame dan sesuaikan posisi foto agar pas di kolom frame.</p>
+    <p class="lead">Pilih frame yang kamu sukai untuk foto-fotomu.</p>
     <div class="frame-gallery" id="frameGallery"></div>
-
-    <div class="strip-editor" style="display:flex; flex-direction:column; align-items:center; gap:16px;">
-      <div class="strip-preview" id="stripPreview"></div>
-      
-      <!-- Kontrol Atur Posisi Foto -->
-      <div class="photo-controls" style="width:100%; max-width:320px; background:var(--cream); padding:14px; border-radius:16px; border:1px solid var(--pink-deep);">
-        <label style="font-size:13px; font-weight:700; display:block; margin-bottom:6px;">🔍 Zoom Foto:</label>
-        <input type="range" id="zoomSlider" min="0.8" max="2" step="0.05" value="1" style="width:100%;">
-        <p style="font-size:11px; color:var(--plum-soft); margin:6px 0 0; text-align:center;">💡 Tahan & geser foto di atas untuk menyesuaikan posisinya di dalam frame.</p>
-      </div>
-    </div>
 
     <div class="btn-row">
       <button class="btn btn-ghost" id="backToCaptureBtn">← Foto Ulang</button>
@@ -348,6 +326,7 @@
     </div>
   </div>
 </div>
+
 <!-- MANAGE FRAMES -->
 <div class="screen" id="screen-manage-frames">
   <div class="card">
@@ -375,8 +354,20 @@
   <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
   <div class="card" style="text-align:center;">
     <h2>Selesai! Cantik sekali ✨</h2>
-    <p class="lead">Simpan, cetak, atau kirim ke HP kamu.</p>
-    <canvas id="finalCanvas" width="900" height="3036"></canvas>
+    <p class="lead">Atur & geser posisi foto di dalam frame, lalu simpan, cetak, atau kirim ke HP kamu.</p>
+
+    <!-- Editor Interaktif Langsung di Menu Final -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px; margin:20px 0;">
+      <div class="strip-preview" id="stripPreviewFinal"></div>
+      
+      <div class="photo-controls" style="width:100%; max-width:320px; background:var(--cream); padding:14px; border-radius:16px; border:1px solid var(--pink-deep); text-align:left;">
+        <label style="font-size:13px; font-weight:700; display:block; margin-bottom:6px;">🔍 Zoom Foto:</label>
+        <input type="range" id="zoomSlider" min="0.8" max="2" step="0.05" value="1" style="width:100%;">
+        <p style="font-size:11px; color:var(--plum-soft); margin:6px 0 0; text-align:center;">💡 Tahan & geser foto pada gambar di atas untuk menyesuaikan posisinya di dalam frame.</p>
+      </div>
+    </div>
+
+    <canvas id="finalCanvas" width="1200" height="3000" style="display:none;"></canvas>
     <div id="printArea"><img id="printImg"></div>
 
     <div class="btn-row">
@@ -414,7 +405,7 @@
   </div>
 </div>
 
-<!-- RECEIVE VIA QR SCAN (TAMPILAN KHUSUS PURE FOTO DI HP PELANGGAN) -->
+<!-- RECEIVE VIA QR SCAN -->
 <div class="screen" id="screen-receive">
   <div class="card" style="text-align:center;">
     <h2>✿ Unduh Fotomu ✿</h2>
@@ -441,13 +432,13 @@
 <script>
 /* ===================== LAYOUT ===================== */
 function getDynamicLayout(photoCount) {
-  const W = 1200; // Lebar tetap HD 6x15
-  const H = 3000; // Tinggi tetap HD 6x15
+  const W = 1200;
+  const H = 3000;
   
   if (photoCount === 3) {
     const photoW = 920;
     const photoH = 690;
-    const x = (W - photoW) / 2; // 140px (di tengah)
+    const x = (W - photoW) / 2;
     const startY = 160;
     const gap = 150;
     const positions = [
@@ -457,10 +448,9 @@ function getDynamicLayout(photoCount) {
     ];
     return { W, H, photoW, photoH, positions };
   } else {
-    // Untuk 4 Foto
     const photoW = 860;
     const photoH = 625;
-    const x = (W - photoW) / 2; // 170px (di tengah)
+    const x = (W - photoW) / 2;
     const startY = 90;
     const gap = 50;
     const positions = [
@@ -472,11 +462,10 @@ function getDynamicLayout(photoCount) {
     return { W, H, photoW, photoH, positions };
   }
 }
-const LAYOUT = { W: 1200, H: 3000 };
 const HISTORY_KEY = 'petalBoothHistory';
 const HISTORY_MAX = 20;
 
-/* ===================== MODE MINIMAL (SEMBUNYIKAN UI LAIN SAAT DI HP) ===================== */
+/* ===================== MODE MINIMAL ===================== */
 function setMinimalMode(enable){
   if(enable){
     document.body.classList.add('minimal-mode');
@@ -516,7 +505,9 @@ const state = {
   finalReady:false,
   history:[],
 };
-  
+
+let photoOffsets = [{x:0, y:0}, {x:0, y:0}, {x:0, y:0}, {x:0, y:0}];
+let currentZoom = 1;
 
 /* ===================== NAV ===================== */
 function showScreen(id){
@@ -540,7 +531,6 @@ function highlightOpt(id){
   document.querySelectorAll('.start-option').forEach(o=>o.style.borderColor='var(--pink)');
   document.getElementById(id).style.borderColor='var(--pink-deep)';
 }
-  // Logika ganti tombol jumlah foto yang aktif
 document.querySelectorAll('.photo-count-btn').forEach(btn => {
   btn.onclick = (e) => {
     document.querySelectorAll('.photo-count-btn').forEach(b => b.classList.remove('active'));
@@ -600,13 +590,8 @@ async function startBuiltinCamera(){
   document.getElementById('shutterBtn').disabled=true;
   try{
     stopCamera();
-    // Minta resolusi tinggi (Full HD 1080p / 4K ideal)
     const constraints = {
-      video: {
-        facingMode: 'user',
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      },
+      video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
       audio: false
     };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -622,7 +607,6 @@ function stopCamera(){
   if(state.stream){ state.stream.getTracks().forEach(t=>t.stop()); state.stream=null; }
 }
 
-/* --- Kamera HP (Live) via WebRTC --- */
 function startPhoneCameraPairing(){
   document.getElementById('phoneQrArea').style.display='block';
   const pairStatus=document.getElementById('camPairStatus');
@@ -647,8 +631,11 @@ function startPhoneCameraPairing(){
 
   peer.on('open', (id)=>{
     opened=true; clearTimeout(timeoutId);
-    const baseUrl = location.protocol.startsWith('file') ? 'https://petal-booth.vercel.app' : (location.origin + location.pathname);
-    const url = baseUrl + '?camera=' + id;
+    const getBaseUrl = () => {
+      if (location.protocol === 'file:') return 'https://petal-booth.vercel.app';
+      return location.origin + location.pathname;
+    };
+    const url = getBaseUrl() + '?camera=' + id;
     const camQrImg = document.getElementById('camQrImg');
     camQrImg.src = qrImageUrl(url, 180);
     pairStatus.textContent = 'Scan QR ini pakai kamera HP yang ingin dijadikan kamera.';
@@ -685,7 +672,6 @@ document.getElementById('shutterBtn').onclick = () => {
     return; 
   }
 
-  // Buat elemen angka otomatis jika belum ada
   let overlay = document.getElementById('countdownOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -696,7 +682,6 @@ document.getElementById('shutterBtn').onclick = () => {
   }
 
   const shutterBtn = document.getElementById('shutterBtn');
-  
   isCountingDown = true;
   shutterBtn.disabled = true;
   overlay.style.display = 'block';
@@ -712,7 +697,6 @@ document.getElementById('shutterBtn').onclick = () => {
       clearInterval(timer);
       overlay.style.display = 'none';
       isCountingDown = false;
-      
       takePhoto(w, h);
     }
   }, 1000);
@@ -756,8 +740,9 @@ document.getElementById('keepBtn').onclick=()=>{
     if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
     setTimeout(()=>{ 
       state.order = Array.from({length: state.maxPhotos}, (_, i) => i);
+      photoOffsets = Array.from({length: state.maxPhotos}, () => ({x:0, y:0}));
+      currentZoom = 1;
       buildFrameGallery(); 
-      buildStripPreview(); 
       showScreen('screen-frame'); 
     },500);
   } else {
@@ -793,11 +778,9 @@ function buildFrameGallery(){
       el.innerHTML = `<span class="label">${f.name}</span>`;
     }
 
-    // Saat frame diklik, update frame terpilih & panggil ulang preview
     el.onclick = () => { 
       state.selectedFrame = f; 
       buildFrameGallery(); 
-      buildStripPreview(); 
     };
     gal.appendChild(el);
   });
@@ -838,7 +821,6 @@ function buildManageFrameGallery(){
   uploadTile.onclick=()=>document.getElementById('frameUpload').click();
   gal.appendChild(uploadTile);
 
-  const currentLayout = getDynamicLayout(state.maxPhotos);
   document.getElementById('frameSizeNote').innerHTML =
   `Ukuran frame custom (6x15 HD): <b>1200 × 3000px</b>, PNG transparan.`;
 }
@@ -854,22 +836,22 @@ document.getElementById('frameUpload').onchange=(e)=>{
   e.target.value='';
 };
 
-let photoOffsets = [{x:0, y:0}, {x:0, y:0}, {x:0, y:0}, {x:0, y:0}];
-let currentZoom = 1;
+/* ===================== STRIP PREVIEW INTERAKTIF ===================== */
+function buildStripPreviewFinal(){
+  const wrap = document.getElementById('stripPreviewFinal');
+  if(!wrap) return;
 
-function buildStripPreview(){
-  const wrap = document.getElementById('stripPreview');
   const f = state.selectedFrame || state.frames[0];
+  const layout = getDynamicLayout(state.photos.length);
+
+  wrap.innerHTML = '';
 
   if (f.builtin) {
     wrap.style.background = `linear-gradient(170deg, ${f.color}, white)`;
-    wrap.style.setProperty('--frame-overlay', 'none');
   } else {
     wrap.style.background = '#ffffff';
-    wrap.style.setProperty('--frame-overlay', `url(${f.dataUrl})`);
   }
 
-  wrap.innerHTML = '';
   const slotContainer = document.createElement('div');
   slotContainer.className = 'slot-container';
 
@@ -877,6 +859,12 @@ function buildStripPreview(){
     const slot = document.createElement('div');
     slot.className = 'slot';
     slot.dataset.index = i;
+
+    const pos = layout.positions[i];
+    slot.style.left = (pos.x / layout.W * 100) + '%';
+    slot.style.top = (pos.y / layout.H * 100) + '%';
+    slot.style.width = (pos.w / layout.W * 100) + '%';
+    slot.style.height = (pos.h / layout.H * 100) + '%';
 
     const img = document.createElement('img');
     img.src = state.photos[photoIdx];
@@ -903,6 +891,10 @@ function buildStripPreview(){
         y: e.clientY - startY
       };
       img.style.transform = `translate(${photoOffsets[i].x}px, ${photoOffsets[i].y}px) scale(${currentZoom})`;
+      
+      if(state.finalReady) {
+        renderFinalCanvas();
+      }
     });
 
     const stopDrag = () => { isDragging = false; };
@@ -912,21 +904,27 @@ function buildStripPreview(){
 
   wrap.appendChild(slotContainer);
 
-  if (f.builtin) {
+  if (!f.builtin && f.dataUrl) {
+    const frameOverlay = document.createElement('img');
+    frameOverlay.className = 'frame-overlay-img';
+    frameOverlay.src = f.dataUrl;
+    wrap.appendChild(frameOverlay);
+  } else if (f.builtin) {
     const cap = document.createElement('div');
-    cap.className = 'cap';
     cap.textContent = '✿ Petal Booth ✿';
-    cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:5; font-family:Caveat,cursive;';
+    cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:5; font-family:Caveat,cursive; font-size:18px; color:'+(f.accent||'#E9A6BC')+';';
     wrap.appendChild(cap);
   }
 }
 
-// Event slider zoom
 document.getElementById('zoomSlider').oninput = (e) => {
   currentZoom = parseFloat(e.target.value);
-  buildStripPreview();
+  buildStripPreviewFinal();
+  if(state.finalReady) {
+    renderFinalCanvas();
+  }
 };
-  
+
 document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
   document.getElementById('downloadBtn').disabled=true;
@@ -935,6 +933,9 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   document.getElementById('codeBox').style.display='none';
   document.getElementById('qrWrap').style.display='none';
   state.finalReady=false;
+
+  buildStripPreviewFinal();
+
   try{
     await renderFinalCanvas();
     state.finalReady=true;
@@ -952,12 +953,11 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
 /* ===================== FINAL CANVAS ===================== */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
-   const canvas=document.getElementById('finalCanvas');
-   const ctx=canvas.getContext('2d');
+    const canvas=document.getElementById('finalCanvas');
+    const ctx=canvas.getContext('2d');
 
-   // Memanggil layout dinamis (HD 6x15) berdasarkan jumlah foto yang diambil
-   const layout = getDynamicLayout(state.photos.length);
-   const {W,H,PAD,photoW,photoH,positions} = layout;
+    const layout = getDynamicLayout(state.photos.length);
+    const {W,H,positions} = layout;
     
     canvas.width=W; canvas.height=H;
     const f=state.selectedFrame||state.frames[0];
@@ -972,20 +972,31 @@ function renderFinalCanvas(){
     }
 
     let loaded=0; const total=state.photos.length; let failed=false;
-   state.order.forEach((photoIdx, slotI)=>{
+    state.order.forEach((photoIdx, slotI)=>{
       const im=new Image();
       im.onload=()=>{
         if(failed) return;
         const pos = layout.positions[slotI];
         const px = pos.x, py = pos.y, pw = pos.w, ph = pos.h;
 
-        const scale=Math.max(pw/im.width, ph/im.height);
-        const dw=im.width*scale, dh=im.height*scale;
-        const dx=px+(pw-dw)/2, dy=py+(ph-dh)/2;
+        const previewW = 220; 
+        const scaleFactor = W / previewW;
+
+        const offset = photoOffsets[slotI] || {x:0, y:0};
+        const offsetX = offset.x * scaleFactor;
+        const offsetY = offset.y * scaleFactor;
+
+        const baseScale = Math.max(pw/im.width, ph/im.height);
+        const scale = baseScale * currentZoom;
+        
+        const dw = im.width * scale;
+        const dh = im.height * scale;
+        const dx = px + (pw - dw) / 2 + offsetX;
+        const dy = py + (ph - dh) / 2 + offsetY;
 
         ctx.save(); 
         ctx.beginPath(); 
-        roundRect(ctx, px, py, pw, ph, 16); 
+        ctx.rect(px, py, pw, ph); 
         ctx.clip();
         ctx.drawImage(im, dx, dy, dw, dh); 
         ctx.restore();
@@ -1015,6 +1026,7 @@ function renderFinalCanvas(){
     });
   });
 }
+
 function finishCanvasFooter(ctx,W,H,f){
   ctx.fillStyle=f.accent||'#E9A6BC'; ctx.font="italic 58px 'Fraunces', serif"; ctx.textAlign='center';
   ctx.fillText('✿ Petal Booth ✿', W/2, H-70);
@@ -1022,21 +1034,17 @@ function finishCanvasFooter(ctx,W,H,f){
   const dateStr=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
   ctx.fillText(dateStr, W/2, H-24);
 }
+
 function roundRect(ctx,x,y,w,h,r){
   ctx.beginPath(); ctx.moveTo(x+r,y);
   ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
+
 function safeDataUrl(){
   const canvas=document.getElementById('finalCanvas');
-  try{ 
-    // Export ke PNG tanpa lossy compression untuk hasil print yang tajam
-    return canvas.toDataURL('image/png'); 
-  }
-  catch(e){
-    alert('Gagal memproses gambar. Coba pakai Kamera Perangkat.');
-    return null;
-  }
+  try{ return canvas.toDataURL('image/png'); }
+  catch(e){ alert('Gagal memproses gambar. Coba pakai Kamera Perangkat.'); return null; }
 }
 
 document.getElementById('downloadBtn').onclick=()=>{
@@ -1070,6 +1078,7 @@ function showSendReady(){
   document.getElementById('sendPhoneBtn').disabled=false;
   document.getElementById('sendRetryRow').style.display='none';
 }
+
 function initHostPeer(){
   if(state.hostPeer) return;
   const peer=new Peer();
@@ -1088,8 +1097,11 @@ function initHostPeer(){
   peer.on('open',(id)=>{
     opened=true; clearTimeout(timeoutId);
     state.hostPeerId=id;
-    const baseUrl = location.protocol.startsWith('file') ? 'https://petal-booth.vercel.app' : (location.origin + location.pathname);
-    const receiveUrl=baseUrl+'?receive='+id;
+    const getBaseUrl = () => {
+      if (location.protocol === 'file:') return 'https://petal-booth.vercel.app';
+      return location.origin + location.pathname;
+    };
+    const receiveUrl=getBaseUrl()+'?receive='+id;
     const qrImgEl=document.getElementById('qrImg');
     qrImgEl.src = qrImageUrl(receiveUrl, 180);
     if(document.getElementById('codeBox').style.display==='block'){ showSendReady(); }
@@ -1112,6 +1124,7 @@ function initHostPeer(){
     }
   });
 }
+
 function sendToPhone(){
   if(!state.finalReady) return;
   const sendBtn=document.getElementById('sendPhoneBtn');
@@ -1161,7 +1174,6 @@ document.getElementById('retrieveGoBtn').onclick=()=>{
   connectToHost(code,'retrieveStatus','retrieveResult');
 };
 
-/* --- NAVIGASI KEMBALI KE FOTO TERAKHIR --- */
 document.getElementById('backToFinalBtn').onclick = () => {
   if (state.photos.length > 0) {
     showScreen('screen-final');
