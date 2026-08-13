@@ -99,8 +99,17 @@
   details.help ol{margin:8px 0 2px; padding-left:18px; line-height:1.7;}
   .overlay{position:fixed; inset:0; background:rgba(91,75,102,0.55); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; z-index:50; padding:20px;}
   .overlay.show{display:flex;}
-  .review-card{background:white; border-radius:24px; padding:20px; max-width:420px; width:100%; box-shadow:var(--shadow); text-align:center;}
-  .review-card img{width:100%; border-radius:16px; margin-bottom:16px;}
+  
+  /* PERBAIKAN POPUP REVIEW AGAR TOMBOL TAMPIL PASTI & TDK TERDORONG KELUAR LAYAR */
+  .review-card{
+    background:white; border-radius:24px; padding:20px; max-width:420px; width:100%; 
+    max-height: 90vh; overflow-y: auto;
+    box-shadow:var(--shadow); text-align:center;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .review-card img{
+    width:100%; max-height: 50vh; object-fit: contain; border-radius:16px; margin-bottom:16px;
+  }
   
   .frame-gallery{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; margin-top:8px;}
   .frame-thumb{border-radius:16px; overflow:hidden; cursor:pointer; border:3px solid transparent; position:relative; aspect-ratio:2/5; display:flex; align-items:center; justify-content:center; font-size:11px; text-align:center; padding:6px; background-position:center; background-size:cover;}
@@ -502,7 +511,6 @@ function qrImageUrl(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
-/* PERBAIKAN BURAQ/PECAH: Naikkan resolusi maksimal & kualitas kompresi untuk database */
 function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -546,7 +554,6 @@ const state = {
   isUpdatingFromLive: false
 };
 
-/* SINKRONISASI 2 ARAH (REAL-TIME STREAMING) */
 async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId || state.isUpdatingFromLive) return;
   try {
@@ -570,7 +577,6 @@ async function pushRealtimeSessionState(statusName) {
   }
 }
 
-/* KONEKSIKAN DUA-ARAH UNTUK CUSTOMER MAUPUN ADMIN */
 function listenCurrentSessionLive() {
   if (!window.fbDb || !state.sessionId) return;
   const { doc, onSnapshot } = window.fbFirestoreTools;
@@ -583,9 +589,6 @@ function listenCurrentSessionLive() {
 
     state.isUpdatingFromLive = true;
 
-    // Perangkat pemilik sesi (yang memotret) TETAP pakai foto asli resolusi tinggi di memori lokal.
-    // Snapshot dari Firestore hanya versi terkompresi (untuk sync/monitoring), jadi jangan menimpa
-    // foto asli di perangkat pemilik -- ini mencegah hasil unduh/cetak jadi buram.
     if (data.photos && data.photos.length > 0 && !state.isOwnerDevice) {
       state.photos = data.photos;
     }
@@ -697,16 +700,11 @@ function listenToActiveSessions() {
   });
 }
 
-/* AUTO-CLEAN: hapus otomatis data lama supaya tidak numpuk terus.
-   Sesi/foto yang baru selesai TETAP bisa dibuka & dipantau admin selama
-   CLEANUP_RETENTION_HOURS jam ke depan -- baru dihapus permanen setelahnya.
-   Ubah angka ini kalau mau retensinya lebih lama/pendek. */
 const CLEANUP_RETENTION_HOURS = 24;
 let lastAutoCleanAt = 0;
 
 async function runAutoCleanup(retentionHours = CLEANUP_RETENTION_HOURS){
   if (!window.fbDb) return;
-  // Jangan jalankan lebih dari sekali per 10 menit per tab, biar hemat baca/tulis Firestore.
   if (Date.now() - lastAutoCleanAt < 10 * 60 * 1000) return;
   lastAutoCleanAt = Date.now();
 
@@ -925,7 +923,7 @@ document.getElementById('shutterBtn').onclick = () => {
   }, 1000);
 };
 
-/* PERBAIKAN: Jepret Foto dengan Kualitas Maksimal (0.98 JPEG) */
+/* Jepret Foto dengan Kualitas Maksimal (0.98 JPEG) */
 function takePhoto(w, h) {
   const canvas = document.createElement('canvas'); 
   canvas.width = w; canvas.height = h;
@@ -943,10 +941,12 @@ function takePhoto(w, h) {
   const flash = document.getElementById('camFlash');
   if (flash) { flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash'); }
   
+  /* Menampilkan popup konfirmasi Foto Ulang / Simpan */
   document.getElementById('reviewImg').src = dataUrl;
   document.getElementById('reviewOverlay').classList.add('show');
   document.getElementById('shutterBtn').disabled = false;
 }
+
 document.getElementById('retakeBtn').onclick=()=>{ document.getElementById('reviewOverlay').classList.remove('show'); state.pendingShot=null; };
 document.getElementById('keepBtn').onclick=()=>{
   state.photos.push(state.pendingShot);
@@ -969,6 +969,7 @@ document.getElementById('keepBtn').onclick=()=>{
     setCamStatus((state.maxPhotos - state.photos.length)+' foto lagi ya!');
   }
 };
+
 function renderShotsRow(){
   const row=document.getElementById('shotsRow'); row.innerHTML='';
   for(let i=0; i<state.maxPhotos; i++){
@@ -1350,7 +1351,6 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   }
 };
 
-/* PERBAIKAN: Render Canvas HD + Smooth Antialiasing */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
     const canvas=document.getElementById('finalCanvas');
@@ -1415,34 +1415,103 @@ function renderFinalCanvas(){
   });
 }
 
-/* PERBAIKAN: Fungsi Unduh HD (Kualitas PNG 1.0) */
 function safeDataUrl(){
   const canvas=document.getElementById('finalCanvas');
   try{ return canvas.toDataURL('image/png', 1.0); } catch(e){ return null; }
 }
 
-document.getElementById('downloadBtn').onclick=()=>{
-  const dataUrl=safeDataUrl(); if(!dataUrl) return;
-  const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
+/* UNDUH KHUSUS HD 2X */
+document.getElementById('downloadBtn').onclick = async () => {
+  const exportCanvas = document.createElement('canvas');
+  const W = 2400, H = 6000, previewW = 220;
+  const scaleFactor = W / previewW;
+
+  exportCanvas.width = W; 
+  exportCanvas.height = H;
+  const ctx = exportCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  const f = state.selectedFrame || state.frames[0];
+
+  if (f.builtin) {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, f.color); 
+    grad.addColorStop(1, '#ffffff');
+    ctx.fillStyle = grad; 
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.fillStyle = '#ffffff'; 
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (placedPhotos.length > 0) {
+    const renderPromises = placedPhotos.map((item) => {
+      return new Promise((resolve) => {
+        const im = new Image();
+        im.onload = () => {
+          const renderX = item.x * scaleFactor;
+          const renderY = item.y * scaleFactor;
+          const renderW = item.w * item.scale * scaleFactor;
+          const renderH = item.h * item.scale * scaleFactor;
+
+          const imgRatio = im.width / im.height;
+          const targetRatio = renderW / renderH;
+
+          let sx, sy, sWidth, sHeight;
+          if (imgRatio > targetRatio) {
+            sHeight = im.height;
+            sWidth = im.height * targetRatio;
+            sx = (im.width - sWidth) / 2;
+            sy = 0;
+          } else {
+            sWidth = im.width;
+            sHeight = im.width / targetRatio;
+            sx = 0;
+            sy = (im.height - sHeight) / 2;
+          }
+
+          ctx.drawImage(im, sx, sy, sWidth, sHeight, renderX, renderY, renderW, renderH);
+          resolve();
+        };
+        im.src = item.src || state.photos[item.photoIdx] || '';
+      });
+    });
+
+    await Promise.all(renderPromises);
+  }
+
+  if (!f.builtin && f.dataUrl) {
+    await new Promise((resolve) => {
+      const overlay = new Image();
+      overlay.onload = () => {
+        ctx.drawImage(overlay, 0, 0, W, H);
+        resolve();
+      };
+      overlay.src = f.dataUrl;
+    });
+  }
+
+  const dataUrl = exportCanvas.toDataURL('image/png', 1.0);
+  const a = document.createElement('a');
+  a.download = 'petal-booth-HD-' + Date.now() + '.png';
+  a.href = dataUrl;
+  a.click();
 };
 
-// Fitur Cetak Foto (Print)
 document.getElementById('printBtn').onclick = () => {
   const canvas = document.getElementById('finalCanvas');
   const printImg = document.getElementById('printImg');
   
   if (!canvas || !printImg) return;
   
-  // 1. Ambil gambar dari canvas HD dan tempel ke area cetak
   printImg.src = canvas.toDataURL('image/png', 1.0);
   
-  // 2. Beri jeda sebentar agar gambar termuat penuh, lalu buka jendela print browser
   setTimeout(() => {
     window.print();
   }, 250);
 };
 
-/* KIRIM KE HP & AMBIL KODE MANUAL (via koleksi terpisah shared_results) */
 async function pushFinalImageToShare(){
   if(!window.fbDb || !state.sessionId) return false;
   const canvas = document.getElementById('finalCanvas');
@@ -1506,7 +1575,6 @@ function renderReceivedImage(container, dataUrl){
   container.appendChild(dlBtn);
 }
 
-/* PERBAIKAN UTAMA: Menunggu Modul Firebase Siap Terlebih Dahulu Sebelum Mengambil Foto */
 function fetchSharedResult(code, onFound, onNotFound){
   if(!code){ onNotFound(); return; }
 
@@ -1514,7 +1582,7 @@ function fetchSharedResult(code, onFound, onNotFound){
   const startListening = () => {
     if(!window.fbDb || !window.fbFirestoreTools){
       attempts++;
-      if(attempts > 50){ // Tunggu hingga 10 detik jika modul Firebase lambat termuat
+      if(attempts > 50){
         onNotFound();
         return;
       }
