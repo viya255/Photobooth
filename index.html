@@ -579,20 +579,36 @@ const state = {
   manageFilterSlots: 3
 };
 
-function loadStoredFrames(){
-  try {
-    const saved = localStorage.getItem(FRAMES_KEY);
-    if(saved){
-      const customFrames = JSON.parse(saved);
-      state.frames = [...state.frames, ...customFrames];
+function loadStoredFrames() {
+  if (!window.fbDb) return;
+  const { collection, onSnapshot } = window.fbFirestoreTools;
+
+  // Dengarkan koleksi 'custom_frames' dari Firebase secara otomatis
+  onSnapshot(collection(window.fbDb, "custom_frames"), (snapshot) => {
+    const firebaseFrames = [];
+    snapshot.forEach((docSnap) => {
+      firebaseFrames.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    // Gabungkan frame bawaan dengan frame dari Firebase Cloud
+    const builtins = state.frames.filter(f => f.builtin);
+    state.frames = [...builtins, ...firebaseFrames];
+
+    // Perbarui galeri jika pengguna sedang di layar frame
+    const screenFrame = document.getElementById('screen-frame');
+    const screenManage = document.getElementById('screen-manage-frames');
+    
+    if (screenFrame && screenFrame.classList.contains('active')) {
+      buildFrameGallery();
     }
-  } catch(e){}
+    if (screenManage && screenManage.classList.contains('active')) {
+      buildManageFrameGallery();
+    }
+  });
 }
-function saveCustomFrames(){
-  try {
-    const custom = state.frames.filter(f => !f.builtin);
-    localStorage.setItem(FRAMES_KEY, JSON.stringify(custom));
-  } catch(e){}
+
+function saveCustomFrames() {
+  // Fungsi ini dikosongkan karena penyimpanan sudah ditangani otomatis oleh Firebase saat upload
 }
 
 let placedPhotos = [];
@@ -933,23 +949,41 @@ function buildManageFrameGallery(){
   `Ukuran frame custom (6x15 HD): <b>1200 × 3000px</b>, PNG transparan. Upload ini akan masuk ke kategori <b>${state.manageFilterSlots} Jepretan</b>.`;
 }
 
-document.getElementById('frameUpload').onchange=(e)=>{
-  const file=e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    const f={
-      id:'custom-'+Date.now(), 
-      slots: state.manageFilterSlots,
-      name:`Custom (${state.manageFilterSlots} Shot)`, 
-      dataUrl:reader.result, 
-      builtin:false
-    };
-    state.frames.push(f);
-    saveCustomFrames();
-    buildManageFrameGallery();
+document.getElementById('frameUpload').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const base64Data = reader.result;
+      const frameId = 'custom-' + Date.now();
+      const storageRef = window.fbStorageTools.ref(window.fbStorage, `frames/${frameId}.png`);
+
+      // 1. Upload file gambar ke Firebase Storage
+      await window.fbStorageTools.uploadString(storageRef, base64Data, 'data_url');
+      const downloadURL = await window.fbStorageTools.getDownloadURL(storageRef);
+
+      // 2. Simpan data frame ke Firestore Database
+      await window.fbFirestoreTools.addDoc(
+        window.fbFirestoreTools.collection(window.fbDb, "custom_frames"),
+        {
+          slots: state.manageFilterSlots,
+          name: `Custom (${state.manageFilterSlots} Shot)`,
+          dataUrl: downloadURL,
+          storagePath: `frames/${frameId}.png`,
+          builtin: false,
+          createdAt: Date.now()
+        }
+      );
+
+      alert('Frame berhasil di-upload ke Cloud! Semua device sekarang bisa memakainya. ✿');
+    } catch (err) {
+      alert('Gagal mengunggah frame ke Firebase: ' + err.message);
+    }
   };
   reader.readAsDataURL(file);
-  e.target.value='';
+  e.target.value = '';
 };
 
 /* EDITOR OTOMATIS PLACEMENT & GESER / RESIZE UJUNG LANGSUNG */
@@ -1662,6 +1696,33 @@ highlightOpt('optBuiltin');
 updateMirrorUI();
 state.history = loadHistory();
 renderHistoryAll();
+</script>
+  <!-- Firebase App, Firestore, & Storage SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+  // 1. Salin konfigurasi dari Langkah 1 ke sini:
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  // Jadikan variabel Firebase bisa diakses global oleh script Petal Booth
+  window.fbDb = db;
+  window.fbStorage = storage;
+  window.fbFirestoreTools = { collection, addDoc, onSnapshot, deleteDoc, doc };
+  window.fbStorageTools = { ref, uploadString, getDownloadURL, deleteObject };
 </script>
 </body>
 </html>
