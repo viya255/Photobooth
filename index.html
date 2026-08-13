@@ -1462,28 +1462,51 @@ document.getElementById('downloadBtn').onclick=()=>{
 };
 
 /* KIRIM KE HP & AMBIL KODE MANUAL (via koleksi terpisah shared_results) */
+/* PUSH FOTO KE SHARED_RESULTS */
 async function pushFinalImageToShare(){
   if(!window.fbDb || !state.sessionId) return false;
   const canvas = document.getElementById('finalCanvas');
   
   try{
-    // Ambil data canvas
-    const rawDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-    
-    // Kompresi terlebih dahulu agar unggah ke Firestore cepat dan tidak timeout
-    const compressedImage = await compressBase64(rawDataUrl, 1200, 0.85);
+    const rawDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    const compressedImage = await compressBase64(rawDataUrl, 1000, 0.80); // Dikecilkan dikit biar super cepat di-upload
 
     const { doc, setDoc } = window.fbFirestoreTools;
-    await setDoc(doc(window.fbDb, "shared_results", state.sessionId), {
-      code: state.sessionId,
+    const cleanCode = state.sessionId.trim().toUpperCase();
+
+    // Simpan dengan ID dokumen huruf KAPITAL
+    await setDoc(doc(window.fbDb, "shared_results", cleanCode), {
+      code: cleanCode,
       image: compressedImage,
       createdAt: Date.now()
     });
     return true;
   }catch(err){
-    console.error('Gagal menyiapkan hasil untuk dikirim:', err);
+    console.error('Gagal upload ke shared_results:', err);
     return false;
   }
+}
+
+/* FETCH RESULT DI HP (DITAMBAH LOGGING & RETRY) */
+function fetchSharedResult(code, onFound, onNotFound){
+  if(!window.fbDb || !code){ onNotFound(); return; }
+  
+  const { doc, getDoc } = window.fbFirestoreTools;
+  const cleanCode = code.trim().toUpperCase();
+
+  // Gunakan getDoc (sekali ambil) agar lebih stabil daripada listener realtime di HP
+  getDoc(doc(window.fbDb, "shared_results", cleanCode))
+    .then((docSnap) => {
+      if(docSnap.exists() && docSnap.data().image){
+        onFound(docSnap.data().image);
+      } else {
+        onNotFound();
+      }
+    })
+    .catch((err) => {
+      console.error("Error mengambil foto:", err);
+      onNotFound();
+    });
 }
 
 function showSendCodeBox(){
