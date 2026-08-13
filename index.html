@@ -1378,32 +1378,43 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
 };
 
 /* PERBAIKAN: Render Canvas HD + Smooth Antialiasing */
+/* PERBAIKAN: Render Canvas HD Tanpa Penurunan Kualitas */
 function renderFinalCanvas(){
-  return new Promise((resolve, reject)=>{
-    const canvas=document.getElementById('finalCanvas');
-    const ctx=canvas.getContext('2d');
+  return new Promise((resolve)=>{
+    const canvas = document.getElementById('finalCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Tetapkan resolusi HD 1200 x 3000px
     const W = 1200, H = 3000, previewW = 220;
     const scaleFactor = W / previewW;
 
-    canvas.width=W; canvas.height=H;
+    canvas.width = W; 
+    canvas.height = H;
+    
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    const f=state.selectedFrame||state.frames[0];
+    const f = state.selectedFrame || state.frames[0];
 
     if(f.builtin){
-      const grad=ctx.createLinearGradient(0,0,0,H);
-      grad.addColorStop(0,f.color); grad.addColorStop(1,'#ffffff');
-      ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+      const grad = ctx.createLinearGradient(0,0,0,H);
+      grad.addColorStop(0, f.color); 
+      grad.addColorStop(1, '#ffffff');
+      ctx.fillStyle = grad; 
+      ctx.fillRect(0,0,W,H);
     } else {
-      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = '#ffffff'; 
+      ctx.fillRect(0,0,W,H);
     }
 
     if(placedPhotos.length === 0) { resolve(); return; }
 
-    let loaded=0; const total=placedPhotos.length;
+    let loaded = 0; 
+    const total = placedPhotos.length;
+
     placedPhotos.forEach((item) => {
       const im = new Image();
+      im.crossOrigin = "anonymous";
       im.onload = () => {
         const renderX = item.x * scaleFactor;
         const renderY = item.y * scaleFactor;
@@ -1431,78 +1442,66 @@ function renderFinalCanvas(){
         loaded++;
         if(loaded === total){
           if(!f.builtin && f.dataUrl){
-            const overlay=new Image();
-            overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); resolve(); };
-            overlay.src=f.dataUrl;
-          } else { resolve(); }
+            const overlay = new Image();
+            overlay.crossOrigin = "anonymous";
+            overlay.onload = () => { 
+              ctx.drawImage(overlay, 0, 0, W, H); 
+              resolve(); 
+            };
+            overlay.src = f.dataUrl;
+          } else { 
+            resolve(); 
+          }
         }
       };
-      im.src = item.src || state.photos[item.photoIdx] || '';
+      // Selalu prioritaskan foto asli resolusi tinggi dari memori jika ada
+      im.src = state.photos[item.photoIdx] || item.src || '';
     });
   });
 }
 
-/* PERBAIKAN: Fungsi Unduh HD (Kualitas PNG 1.0) */
 function safeDataUrl(){
-  const canvas=document.getElementById('finalCanvas');
+  const canvas = document.getElementById('finalCanvas');
   try{ return canvas.toDataURL('image/png', 1.0); } catch(e){ return null; }
 }
 
-document.getElementById('downloadBtn').onclick=()=>{
-  const dataUrl=safeDataUrl(); if(!dataUrl) return;
-  const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
-};
-  // Fitur Cetak Foto (Print)
-  document.getElementById('printBtn').onclick = () => {
-  const canvas = document.getElementById('finalCanvas');
-  const printImg = document.getElementById('printImg');
-  
-  if (!canvas || !printImg) return;
-  
-  // 1. Ambil gambar dari canvas HD dan tempel ke area cetak
-  printImg.src = canvas.toDataURL('image/png', 1.0);
-  
-  // 2. Beri jeda sebentar agar gambar termuat penuh, lalu buka jendela print browser
-  setTimeout(() => {
-    window.print();
-  }, 250);
-};
-
-/* KIRIM KE HP & AMBIL KODE MANUAL (via koleksi terpisah shared_results) */
-/* PUSH FOTO KE SHARED_RESULTS (DENGAN KOMPRESI SINKRON & KAPITALISASI) */
+/* PUSH FOTO HD KE SHARED_RESULTS */
 async function pushFinalImageToShare(){
   if(!window.fbDb || !state.sessionId) return false;
+  
+  // Pastikan render ulang canvas dengan resolusi HD sebelum di-upload
+  await renderFinalCanvas();
   const canvas = document.getElementById('finalCanvas');
   
   try{
-    const rawDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    // Kompresi dulu ke max 1000px agar payload kecil & instan ter-upload
-    const compressedImage = await compressBase64(rawDataUrl, 1000, 0.80);
+    // Menggunakan PNG Kualitas 1.0 agar tetap tajam dan jernih
+    const rawDataUrl = canvas.toDataURL('image/png', 1.0);
+    
+    // Hanya kompresi sedikit ukuran dimensi (1600px) agar muat di Firestore tanpa pecah
+    const HDImage = await compressBase64(rawDataUrl, 1600, 0.92);
 
     const { doc, setDoc } = window.fbFirestoreTools;
     const cleanCode = state.sessionId.trim().toUpperCase();
 
-    // Simpan dokumen di Firestore dengan ID HURUF KAPITAL
     await setDoc(doc(window.fbDb, "shared_results", cleanCode), {
       code: cleanCode,
-      image: compressedImage,
+      image: HDImage,
       createdAt: Date.now()
     });
     return true;
   }catch(err){
-    console.error('Gagal upload foto ke shared_results:', err);
+    console.error('Gagal upload foto HD ke shared_results:', err);
     return false;
   }
 }
 
-/* FETCH RESULT DI HP (SINGLE FUNCTION - TANPA TERTIMPA/DUPLIKAT) */
+/* FETCH RESULT DI HP */
 function fetchSharedResult(code, onFound, onNotFound){
   if(!window.fbDb || !code){ onNotFound(); return; }
   
   const { doc, getDoc } = window.fbFirestoreTools;
   const cleanCode = code.trim().toUpperCase();
 
-  // Gunakan getDoc (sekali panggil) dengan kode uppercase agar pasti match
   getDoc(doc(window.fbDb, "shared_results", cleanCode))
     .then((docSnap) => {
       if(docSnap.exists() && docSnap.data().image){
@@ -1517,7 +1516,7 @@ function fetchSharedResult(code, onFound, onNotFound){
     });
 }
 
-/* TAMPILKAN QR BOX DI LAPTOP/IPAD */
+/* TAMPILKAN QR BOX & PAKSA TOMBOL AKTIF */
 function showSendCodeBox(){
   const codeBox = document.getElementById('codeBox');
   const qrWrap = document.getElementById('qrWrap');
@@ -1525,9 +1524,9 @@ function showSendCodeBox(){
   const retryRow = document.getElementById('sendRetryRow');
   
   codeBox.style.display = 'block';
-  qrWrap.style.display = 'none'; // Sembunyikan QR sebelum upload beres
+  qrWrap.style.display = 'none';
   retryRow.style.display = 'none';
-  codeBoxText.textContent = '⏳ Mengunggah foto ke cloud, mohon tunggu sebentar...';
+  codeBoxText.textContent = '⏳ Memproses & mengunggah foto HD, mohon tunggu...';
 
   pushFinalImageToShare().then((ok)=>{
     if(!ok){
@@ -1536,13 +1535,34 @@ function showSendCodeBox(){
       return;
     }
     
-    // Upload sukses -> baru QR dibuat & ditampilkan
     const url = location.origin + location.pathname + '?send=' + state.sessionId.trim().toUpperCase();
     document.getElementById('qrImg').src = qrImageUrl(url, 180);
     qrWrap.style.display = 'inline-block';
-    codeBoxText.innerHTML = '✨ Foto Siap! Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId.toUpperCase() + '</b>';
+    codeBoxText.innerHTML = '✨ Foto HD Siap! Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId.toUpperCase() + '</b>';
   });
 }
+
+/* PERBAIKAN TOMBOL KE HALAMAN FINAL */
+document.getElementById('toFinalBtn').onclick = async ()=>{
+  showScreen('screen-final');
+  setupEditorWorkspace();
+
+  try{
+    await renderFinalCanvas();
+    
+    // LANGSUNG aktifkan semua tombol tanpa syarat
+    enableActionButtons();
+    
+    const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
+    if(thumb) addToHistory(thumb);
+
+    pushRealtimeSessionState('Editor / Selesai');
+    listenCurrentSessionLive();
+  }catch(e){
+    enableActionButtons(); // Tetap aktifkan tombol meski ada error background
+    console.error('Error saat berpindah ke final screen:', e);
+  }
+};
 
 /* CEK PENERIMAAN FOTO DI HP */
 function startReceiveFlow(code){
@@ -1576,7 +1596,26 @@ document.getElementById('retrieveGoBtn').onclick = () => {
     ()=>{ statusEl.textContent = 'Kode tidak ditemukan atau sudah kedaluwarsa.'; }
   );
 };
-document.getElementById('backToFinalBtn').onclick = () => { showScreen('screen-final'); };
+document.getElementById('toFinalBtn').onclick = async ()=>{
+  showScreen('screen-final');
+  setupEditorWorkspace();
+
+  try{
+    await renderFinalCanvas();
+    
+    // Langsung buka akses tombol tanpa syarat
+    enableActionButtons();
+    
+    const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
+    if(thumb) addToHistory(thumb);
+
+    pushRealtimeSessionState('Editor / Selesai');
+    listenCurrentSessionLive();
+  }catch(e){
+    enableActionButtons();
+    console.error('Error saat berpindah ke final screen:', e);
+  }
+};
 
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.selectedFrame=null; placedPhotos = [];
