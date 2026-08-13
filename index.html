@@ -172,12 +172,27 @@
   .history-row .row-actions button{width:32px; height:32px; border-radius:999px; background:var(--white); border:2px solid var(--pink); color:var(--plum); font-size:13px; cursor:pointer;}
   .history-row .row-actions button.del{border-color:var(--danger); color:var(--danger);}
 
+  /* PERBAIKAN CETAK / PRINT RESOLUSI TINGGI 300 DPI */
   #printArea{display:none;}
   @media print{
+    @page { margin: 0; size: auto; }
     body *{visibility:hidden;}
     #printArea, #printArea *{visibility:visible;}
-    #printArea{display:block !important; position:fixed; top:0; left:0; width:2in;}
-    #printArea img{width:2in;}
+    #printArea{
+      display:block !important; 
+      position:fixed; 
+      top:0; 
+      left:0; 
+      width: 2in; 
+      height: 6in;
+    }
+    #printArea img{
+      width: 100%; 
+      height: 100%; 
+      object-fit: contain;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
   }
 </style>
 </head>
@@ -489,7 +504,6 @@ function qrImageUrl(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
-/* PERBAIKAN BURAQ/PECAH: Naikkan resolusi maksimal & kualitas kompresi untuk database */
 function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -866,7 +880,6 @@ document.getElementById('shutterBtn').onclick = () => {
   }, 1000);
 };
 
-/* PERBAIKAN: Jepret Foto dengan Kualitas Maksimal (0.98 JPEG) */
 function takePhoto(w, h) {
   const canvas = document.createElement('canvas'); 
   canvas.width = w; canvas.height = h;
@@ -1287,7 +1300,7 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   }
 };
 
-/* PERBAIKAN: Render Canvas HD + Smooth Antialiasing */
+/* RENDER CANVAS HD 1200x3000px DENGAN ASPECT RATIO COVER */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
     const canvas=document.getElementById('finalCanvas');
@@ -1352,7 +1365,6 @@ function renderFinalCanvas(){
   });
 }
 
-/* PERBAIKAN: Fungsi Unduh HD (Kualitas PNG 1.0) */
 function safeDataUrl(){
   const canvas=document.getElementById('finalCanvas');
   try{ return canvas.toDataURL('image/png', 1.0); } catch(e){ return null; }
@@ -1362,6 +1374,23 @@ document.getElementById('downloadBtn').onclick=()=>{
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
   const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
 };
+
+/* PERBAIKAN CETAK / PRINT RESOLUSI TINGGI 300 DPI */
+document.getElementById('printBtn').onclick = () => {
+  const canvas = document.getElementById('finalCanvas');
+  if (!canvas) return;
+  
+  const highResDataUrl = canvas.toDataURL('image/png', 1.0);
+  const printImg = document.getElementById('printImg');
+  
+  if (printImg) {
+    printImg.src = highResDataUrl;
+    setTimeout(() => {
+      window.print();
+    }, 300);
+  }
+};
+
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.selectedFrame=null; placedPhotos = [];
   pushRealtimeSessionState('Sesi Selesai');
