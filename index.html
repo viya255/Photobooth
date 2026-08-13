@@ -1466,6 +1466,7 @@ async function pushFinalImageToShare(){
 }
 
 // 2. Tampilkan Loading dulu, SETELAH upload sukses baru tampilkan QR
+// 1. Perbaikan fungsi penyiapan pengiriman QR
 async function showSendCodeBox(){
   const codeBox = document.getElementById('codeBox');
   const qrWrap = document.getElementById('qrWrap');
@@ -1473,25 +1474,40 @@ async function showSendCodeBox(){
   const retryRow = document.getElementById('sendRetryRow');
   
   codeBox.style.display = 'block';
-  qrWrap.style.display = 'none'; // Sembunyikan QR dulu agar tidak di-scan sebelum data siap
+  qrWrap.style.display = 'none';
   retryRow.style.display = 'none';
-  codeBoxText.innerHTML = '⏳ <b>Menyiapkan foto & membuat kode QR…</b>';
+  
+  // Pastikan layar otomatis scroll ke kotak QR agar kelihatan oleh pengguna
+  codeBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-  // Tunggu upload selesai
-  const ok = await pushFinalImageToShare();
-
-  if(!ok){
-    codeBoxText.textContent = '❌ Gagal menyiapkan pengiriman (Cek koneksi internet).';
+  // Cek apakah database Firebase sudah siap
+  if (!window.fbDb) {
+    codeBoxText.innerHTML = '⚠️ <b>Koneksi database belum siap.</b> Tunggu beberapa detik lalu klik "Coba Lagi".';
     retryRow.style.display = 'flex';
     return;
   }
 
-  // Setelah sukses ter-upload ke Firestore, baru buat dan tampilkan QR Code!
+  codeBoxText.innerHTML = '⏳ <b>Menyiapkan foto & membuat kode QR…</b>';
+
+  // Upload gambar ke Firebase
+  const ok = await pushFinalImageToShare();
+
+  if(!ok){
+    codeBoxText.innerHTML = '❌ <b>Gagal mengunggah foto.</b> Cek koneksi internet kamu.';
+    retryRow.style.display = 'flex';
+    return;
+  }
+
+  // Jika sukses upload, buat dan tampilkan QR Code
   const url = location.origin + location.pathname + '?send=' + state.sessionId;
   document.getElementById('qrImg').src = qrImageUrl(url, 180);
   qrWrap.style.display = 'inline-block';
-  codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
+  codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b style="font-size:16px;">' + state.sessionId + '</b>';
 }
+
+// 2. Hubungkan tombol Kirim ke HP & Tombol Coba Lagi
+document.getElementById('sendPhoneBtn').onclick = () => { showSendCodeBox(); };
+document.getElementById('sendRetryBtn').onclick = () => { showSendCodeBox(); };
 
 // 3. Perbaikan Pencarian Data di HP Penerima (Toleran terhadap delay jaringan)
 function fetchSharedResult(code, onFound, onNotFound){
