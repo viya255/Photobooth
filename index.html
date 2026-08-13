@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>✿ Petal Booth ✿</title>
+<title>✿ Photobooth BSD ✿</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Quicksand:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -129,6 +129,11 @@
   .frame-mini-card { min-width: 65px; height: 110px; border-radius: 10px; border: 2px solid var(--pink); cursor: pointer; background-size: cover; background-position: center; position: relative; flex-shrink: 0; }
   .frame-mini-card.selected { border-color: var(--pink-deep); box-shadow: 0 0 0 3px rgba(233,166,188,0.5); }
 
+  /* KONTROL ZOOM PADA EDITOR */
+  .zoom-controls { display: flex; gap: 8px; align-items: center; justify-content: center; background: var(--cream); border: 1px solid var(--pink-deep); border-radius: 99px; padding: 4px 12px; margin-top: 4px; }
+  .zoom-btn { background: white; border: 1px solid var(--pink-deep); color: var(--plum); font-weight: 700; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .zoom-btn:active { transform: scale(0.92); }
+
   #finalCanvas{max-width:220px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;}
   .code-box{background:var(--lavender); border-radius:16px; padding:18px 20px; text-align:center; margin-top:16px; width:100%;}
   .code-box p{margin:10px 0 0; font-size:13px; color:var(--plum-soft);}
@@ -198,7 +203,7 @@
 </div>
 
 <div class="brand" id="brandClick">
-  <span class="mark">🌷</span><h1>Petal Booth</h1><span class="tag">say cheese, sayang~</span>
+  <span class="mark">🌷</span><h1>Photobooth BSD</h1><span class="tag">say cheese, sayang~</span>
 </div>
 
 <!-- START -->
@@ -346,10 +351,18 @@
   <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
   <div class="card" style="text-align:center;">
     <h2>Selesai! Cantik sekali ✨</h2>
-    <p class="lead">Geser tengah foto untuk memindahkan. Tarik titik merah muda ⤢ di ujung kanan bawah foto untuk memperbesar / memperkecil.</p>
+    <p class="lead">Geser tengah foto untuk memindahkan. Pilih foto lalu gunakan tombol **Zoom (+/-)** di bawah untuk memperbesar/memperkecil foto.</p>
 
     <div class="editor-workspace">
       <div class="strip-preview" id="stripPreviewFinal"></div>
+
+      <!-- KONTROL ZOOM FOTO LENGKAP -->
+      <div class="zoom-controls">
+        <span style="font-size:12px; font-weight:700; color:var(--plum);">🔍 Zoom Foto Terpilih:</span>
+        <button class="zoom-btn" id="zoomOutBtn" type="button" title="Perkecil Foto">-</button>
+        <button class="zoom-btn" id="zoomInBtn" type="button" title="Perbesar Foto">+</button>
+        <button class="btn btn-ghost" id="resetZoomBtn" type="button" style="padding: 4px 10px; font-size: 11px;">Reset</button>
+      </div>
 
       <div style="width:100%; max-width:380px; text-align:left;">
         <label style="font-size:12px; font-weight:700; color:var(--plum);">🖼️ Ganti Frame:</label>
@@ -478,8 +491,7 @@ function qrImageUrl(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
-// HELPER KOMPRESI GAMBAR AGAR TIDAK LEBIH DARI LIMIT FIRESTORE (1MB)
-function compressBase64(dataUrl, maxSide = 400, quality = 0.5) {
+function compressBase64(dataUrl, maxSide = 350, quality = 0.5) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -523,8 +535,6 @@ async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId) return;
   try {
     const { doc, setDoc } = window.fbFirestoreTools;
-
-    // Kompresi semua foto mentah sebelum dikirim agar tidak overlimit & tanpa delay
     const compressedPhotos = await Promise.all(state.photos.map(p => compressBase64(p, 300, 0.5)));
 
     await setDoc(doc(window.fbDb, "active_sessions", state.sessionId), {
@@ -541,6 +551,17 @@ async function pushRealtimeSessionState(statusName) {
     }, { merge: true });
   } catch(err) {
     console.error("Gagal sync ke Firebase:", err);
+  }
+}
+
+/* HAPUS SESI DARI FIREBASE (ADMIN) */
+async function deleteSessionFromFirebase(sessionId) {
+  if (!window.fbDb) return;
+  try {
+    const { doc, deleteDoc } = window.fbFirestoreTools;
+    await deleteDoc(doc(window.fbDb, "active_sessions", sessionId));
+  } catch(e) {
+    console.error("Gagal menghapus sesi:", e);
   }
 }
 
@@ -576,20 +597,30 @@ function listenToActiveSessions() {
       }
 
       card.innerHTML = `
-        <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <div style="width:46px; height:46px; background:var(--pink); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px;">📸</div>
           <div style="flex:1;">
             <span class="monitor-badge">${(data.status || 'Aktif').toUpperCase()}</span>
             <div style="font-size:15px; font-weight:700;">Sesi: ${data.sessionId}</div>
             <div style="font-size:12px; color:var(--plum-soft);">${data.photoCount || 0}/${data.maxPhotos || 3} foto terfoto · ${timeAgo} dtk lalu</div>
           </div>
-          <button class="btn btn-ghost edit-session-btn" style="padding: 8px 16px; font-size: 13px;">👁️ Tonton / Edit Live</button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-ghost edit-session-btn" style="padding: 8px 14px; font-size: 12px;">👁️ Tonton / Edit</button>
+            <button class="btn btn-danger del-session-btn" style="padding: 8px 12px; font-size: 12px;" title="Hapus Sesi">🗑️ Hapus</button>
+          </div>
         </div>
         ${photoGridHTML}
       `;
 
       card.querySelector('.edit-session-btn').onclick = () => {
         openAdminLiveEditor(data.sessionId);
+      };
+
+      card.querySelector('.del-session-btn').onclick = (ev) => {
+        ev.stopPropagation();
+        if(confirm(`Hapus sesi ${data.sessionId}?`)) {
+          deleteSessionFromFirebase(data.sessionId);
+        }
       };
 
       monitorList.appendChild(card);
@@ -599,7 +630,6 @@ function listenToActiveSessions() {
   });
 }
 
-/* FUNGSI BUKA LIVE EDITOR ADMIN TANPA DELAY */
 function openAdminLiveEditor(targetSessionId) {
   if (!window.fbDb) return;
   const { doc, onSnapshot } = window.fbFirestoreTools;
@@ -609,7 +639,6 @@ function openAdminLiveEditor(targetSessionId) {
 
   if (state.adminUnsubscribeLive) state.adminUnsubscribeLive();
 
-  // Listen perubahan dari customer secara langsung
   state.adminUnsubscribeLive = onSnapshot(doc(window.fbDb, "active_sessions", targetSessionId), (docSnap) => {
     if (!docSnap.exists()) return;
     const data = docSnap.data();
@@ -1046,6 +1075,7 @@ function buildEditorFrameSelector(){
   });
 }
 
+/* RENDERING FREE EDITOR + SCROLL / TOMBOL ZOOM */
 function renderFreeEditor(){
   const wrap = document.getElementById('stripPreviewFinal');
   if(!wrap) return;
@@ -1094,6 +1124,16 @@ function renderFreeEditor(){
     resizeHandle.textContent = '⤢';
     el.appendChild(resizeHandle);
 
+    /* ZOOM DENGAN SCROLL MOUSE */
+    el.onwheel = (e) => {
+      e.preventDefault();
+      let delta = e.deltaY < 0 ? 0.05 : -0.05;
+      item.scale = Math.max(0.4, Math.min(3.0, item.scale + delta));
+      renderFreeEditor();
+      if(state.finalReady) renderFinalCanvas();
+      pushRealtimeSessionState('Zoom Foto');
+    };
+
     let isDragging = false, startX = 0, startY = 0;
     const onPointerDown = (e) => {
       if(e.target.classList.contains('photo-del-btn') || e.target.classList.contains('photo-resize-handle')) return;
@@ -1139,6 +1179,40 @@ function renderFreeEditor(){
 
   if(state.finalReady) { renderFinalCanvas(); }
 }
+
+/* EVENT TOMBOL ZOOM (+ / - / RESET) */
+document.getElementById('zoomInBtn').onclick = () => {
+  if (!selectedPlacedPhotoId) return;
+  const item = placedPhotos.find(p => p.id === selectedPlacedPhotoId);
+  if (item) {
+    item.scale = Math.min(3.0, item.scale + 0.1);
+    renderFreeEditor();
+    if(state.finalReady) renderFinalCanvas();
+    pushRealtimeSessionState('Zoom In Foto');
+  }
+};
+
+document.getElementById('zoomOutBtn').onclick = () => {
+  if (!selectedPlacedPhotoId) return;
+  const item = placedPhotos.find(p => p.id === selectedPlacedPhotoId);
+  if (item) {
+    item.scale = Math.max(0.4, item.scale - 0.1);
+    renderFreeEditor();
+    if(state.finalReady) renderFinalCanvas();
+    pushRealtimeSessionState('Zoom Out Foto');
+  }
+};
+
+document.getElementById('resetZoomBtn').onclick = () => {
+  if (!selectedPlacedPhotoId) return;
+  const item = placedPhotos.find(p => p.id === selectedPlacedPhotoId);
+  if (item) {
+    item.scale = 1.0;
+    renderFreeEditor();
+    if(state.finalReady) renderFinalCanvas();
+    pushRealtimeSessionState('Reset Zoom Foto');
+  }
+};
 
 document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
