@@ -1445,12 +1445,18 @@ document.getElementById('downloadBtn').onclick=()=>{
 async function pushFinalImageToShare(){
   if(!window.fbDb || !state.sessionId) return false;
   const canvas = document.getElementById('finalCanvas');
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  
   try{
+    // Ambil data canvas
+    const rawDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    
+    // Kompresi terlebih dahulu agar unggah ke Firestore cepat dan tidak timeout
+    const compressedImage = await compressBase64(rawDataUrl, 1200, 0.85);
+
     const { doc, setDoc } = window.fbFirestoreTools;
     await setDoc(doc(window.fbDb, "shared_results", state.sessionId), {
       code: state.sessionId,
-      image: dataUrl,
+      image: compressedImage,
       createdAt: Date.now()
     });
     return true;
@@ -1465,21 +1471,24 @@ function showSendCodeBox(){
   const qrWrap = document.getElementById('qrWrap');
   const codeBoxText = document.getElementById('codeBoxText');
   const retryRow = document.getElementById('sendRetryRow');
+  
   codeBox.style.display = 'block';
-  qrWrap.style.display = 'none';
+  qrWrap.style.display = 'none'; // Sembunyikan QR dulu sampai upload selesai
   retryRow.style.display = 'none';
-  codeBoxText.textContent = 'Menyiapkan hasil untuk dikirim…';
+  codeBoxText.textContent = '⏳ Mengunggah foto ke cloud, mohon tunggu sebentar...';
 
   pushFinalImageToShare().then((ok)=>{
     if(!ok){
-      codeBoxText.textContent = 'Gagal menyiapkan pengiriman. Coba lagi.';
+      codeBoxText.textContent = '❌ Gagal mengunggah foto. Pastikan koneksi internet aktif lalu coba lagi.';
       retryRow.style.display = 'flex';
       return;
     }
+    
+    // SETELAH upload sukses, baru QR Code di-generate & ditampilkan
     const url = location.origin + location.pathname + '?send=' + state.sessionId;
     document.getElementById('qrImg').src = qrImageUrl(url, 180);
     qrWrap.style.display = 'inline-block';
-    codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
+    codeBoxText.innerHTML = '✨ Foto Siap! Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
   });
 }
 
