@@ -502,6 +502,7 @@ function qrImageUrl(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
+/* PERBAIKAN BURAQ/PECAH: Naikkan resolusi maksimal & kualitas kompresi untuk database */
 function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -511,7 +512,7 @@ function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
       if (w > h) {
         if (w > maxSide) { h = Math.round((h * maxSide) / w); w = maxSide; }
       } else {
-        if (h > maxSide) { w = Math.round((h * maxSide) / h); h = maxSide; }
+        if (h > maxSide) { w = Math.round((w * maxSide) / h); h = maxSide; }
       }
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
@@ -520,7 +521,6 @@ function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
       ctx.drawImage(img, 0, 0, w, h);
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
-    img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
 }
@@ -546,6 +546,7 @@ const state = {
   isUpdatingFromLive: false
 };
 
+/* SINKRONISASI 2 ARAH (REAL-TIME STREAMING) */
 async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId || state.isUpdatingFromLive) return;
   try {
@@ -569,6 +570,7 @@ async function pushRealtimeSessionState(statusName) {
   }
 }
 
+/* KONEKSIKAN DUA-ARAH UNTUK CUSTOMER MAUPUN ADMIN */
 function listenCurrentSessionLive() {
   if (!window.fbDb || !state.sessionId) return;
   const { doc, onSnapshot } = window.fbFirestoreTools;
@@ -581,6 +583,9 @@ function listenCurrentSessionLive() {
 
     state.isUpdatingFromLive = true;
 
+    // Perangkat pemilik sesi (yang memotret) TETAP pakai foto asli resolusi tinggi di memori lokal.
+    // Snapshot dari Firestore hanya versi terkompresi (untuk sync/monitoring), jadi jangan menimpa
+    // foto asli di perangkat pemilik -- ini mencegah hasil unduh/cetak jadi buram.
     if (data.photos && data.photos.length > 0 && !state.isOwnerDevice) {
       state.photos = data.photos;
     }
@@ -692,11 +697,16 @@ function listenToActiveSessions() {
   });
 }
 
+/* AUTO-CLEAN: hapus otomatis data lama supaya tidak numpuk terus.
+   Sesi/foto yang baru selesai TETAP bisa dibuka & dipantau admin selama
+   CLEANUP_RETENTION_HOURS jam ke depan -- baru dihapus permanen setelahnya.
+   Ubah angka ini kalau mau retensinya lebih lama/pendek. */
 const CLEANUP_RETENTION_HOURS = 24;
 let lastAutoCleanAt = 0;
 
 async function runAutoCleanup(retentionHours = CLEANUP_RETENTION_HOURS){
   if (!window.fbDb) return;
+  // Jangan jalankan lebih dari sekali per 10 menit per tab, biar hemat baca/tulis Firestore.
   if (Date.now() - lastAutoCleanAt < 10 * 60 * 1000) return;
   lastAutoCleanAt = Date.now();
 
@@ -713,7 +723,7 @@ async function runAutoCleanup(retentionHours = CLEANUP_RETENTION_HOURS){
 
     if (deletions.length > 0) {
       await Promise.all(deletions);
-      console.log('Auto-clean: menghapus ' + deletions.length + ' data lama.');
+      console.log('Auto-clean: menghapus ' + deletions.length + ' data lama (>' + retentionHours + ' jam).');
     }
   }catch(err){
     console.error('Auto-clean gagal:', err);
@@ -755,14 +765,12 @@ function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-
 function fullCleanup(){
   stopCamera();
   if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
   if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
   if(state.liveUnsubscribe){ state.liveUnsubscribe(); state.liveUnsubscribe = null; }
 }
-
 document.getElementById('homeBtn').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
 document.getElementById('brandClick').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
 
@@ -770,12 +778,10 @@ document.getElementById('brandClick').onclick = ()=>{ setMinimalMode(false); ful
 let chosenSource='builtin';
 document.getElementById('optBuiltin').onclick=()=>{ chosenSource='builtin'; highlightOpt('optBuiltin'); };
 document.getElementById('optPhone').onclick=()=>{ chosenSource='phone'; highlightOpt('optPhone'); };
-
 function highlightOpt(id){
   document.querySelectorAll('.start-option').forEach(o=>o.style.borderColor='var(--pink)');
   document.getElementById(id).style.borderColor='var(--pink-deep)';
 }
-
 document.querySelectorAll('.photo-count-btn').forEach(btn => {
   btn.onclick = (e) => {
     document.querySelectorAll('.photo-count-btn').forEach(b => b.classList.remove('active'));
@@ -783,7 +789,6 @@ document.querySelectorAll('.photo-count-btn').forEach(btn => {
     state.maxPhotos = parseInt(e.currentTarget.dataset.count);
   };
 });
-
 document.getElementById('startBtn').onclick=()=>{
   state.sessionId = 'SESI-' + Math.floor(1000 + Math.random() * 9000);
   state.isOwnerDevice = true;
@@ -804,7 +809,6 @@ function updateMirrorUI(){
   btn.classList.toggle('active', state.mirror);
   videoEl.classList.toggle('video-mirrored', state.mirror);
 }
-
 document.getElementById('mirrorToggleBtn').onclick=()=>{
   state.mirror = !state.mirror;
   updateMirrorUI();
@@ -831,12 +835,10 @@ function switchSource(src){
     startPhoneCameraPairing();
   }
 }
-
 function setCamStatus(msg, isError){
   const el=document.getElementById('camStatus');
   el.textContent=msg; el.classList.toggle('error', !!isError);
 }
-
 async function startBuiltinCamera(){
   setCamStatus('Menyiapkan kamera…');
   document.getElementById('shutterBtn').disabled=true;
@@ -852,7 +854,6 @@ async function startBuiltinCamera(){
     setCamStatus('Tidak bisa mengakses kamera. Pastikan izin kamera aktif.', true);
   }
 }
-
 function stopCamera(){
   if(state.stream){ state.stream.getTracks().forEach(t=>t.stop()); state.stream=null; }
 }
@@ -924,6 +925,7 @@ document.getElementById('shutterBtn').onclick = () => {
   }, 1000);
 };
 
+/* PERBAIKAN: Jepret Foto dengan Kualitas Maksimal (0.98 JPEG) */
 function takePhoto(w, h) {
   const canvas = document.createElement('canvas'); 
   canvas.width = w; canvas.height = h;
@@ -945,7 +947,6 @@ function takePhoto(w, h) {
   document.getElementById('reviewOverlay').classList.add('show');
   document.getElementById('shutterBtn').disabled = false;
 }
-
 document.getElementById('retakeBtn').onclick=()=>{ document.getElementById('reviewOverlay').classList.remove('show'); state.pendingShot=null; };
 document.getElementById('keepBtn').onclick=()=>{
   state.photos.push(state.pendingShot);
@@ -968,7 +969,6 @@ document.getElementById('keepBtn').onclick=()=>{
     setCamStatus((state.maxPhotos - state.photos.length)+' foto lagi ya!');
   }
 };
-
 function renderShotsRow(){
   const row=document.getElementById('shotsRow'); row.innerHTML='';
   for(let i=0; i<state.maxPhotos; i++){
@@ -1033,7 +1033,7 @@ document.getElementById('manageFramesBtn').onclick=()=>{ buildManageFrameGallery
 document.getElementById('liveMonitorBtn').onclick = () => { 
   runAutoCleanup();
   listenToActiveSessions(); 
-  showScreen('screen-admin-monitor');
+  showScreen('screen-admin-monitor'); // <--- Menambahkan navigasi ke layar monitor admin
 };
 document.getElementById('backFromManageBtn').onclick=()=>{ showScreen('screen-start'); };
 document.getElementById('backFromMonitorBtn').onclick=()=>{ showScreen('screen-start'); };
@@ -1332,77 +1332,51 @@ document.getElementById('resetZoomBtn').onclick = () => {
   }
 };
 
-/* PINDAH KE HALAMAN FINAL & BUKA AKSES TOMBOL */
 document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
+  state.finalReady=false;
   setupEditorWorkspace();
 
   try{
     await renderFinalCanvas();
     enableActionButtons();
-    
     const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
     if(thumb) addToHistory(thumb);
 
     pushRealtimeSessionState('Editor / Selesai');
     listenCurrentSessionLive();
   }catch(e){
-    enableActionButtons();
-    console.error('Error saat berpindah ke final screen:', e);
+    alert('Gagal menyiapkan hasil akhir: '+e.message);
   }
 };
 
-/* RENDER CANVAS HD */
+/* PERBAIKAN: Render Canvas HD + Smooth Antialiasing */
 function renderFinalCanvas(){
-  return new Promise((resolve)=>{
-    const canvas = document.getElementById('finalCanvas');
-    const ctx = canvas.getContext('2d');
-    
+  return new Promise((resolve, reject)=>{
+    const canvas=document.getElementById('finalCanvas');
+    const ctx=canvas.getContext('2d');
     const W = 1200, H = 3000, previewW = 220;
     const scaleFactor = W / previewW;
 
-    canvas.width = W; 
-    canvas.height = H;
-    
+    canvas.width=W; canvas.height=H;
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    const f = state.selectedFrame || state.frames[0];
+    const f=state.selectedFrame||state.frames[0];
 
     if(f.builtin){
-      const grad = ctx.createLinearGradient(0,0,0,H);
-      grad.addColorStop(0, f.color); 
-      grad.addColorStop(1, '#ffffff');
-      ctx.fillStyle = grad; 
-      ctx.fillRect(0,0,W,H);
+      const grad=ctx.createLinearGradient(0,0,0,H);
+      grad.addColorStop(0,f.color); grad.addColorStop(1,'#ffffff');
+      ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
     } else {
-      ctx.fillStyle = '#ffffff'; 
-      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
     }
 
     if(placedPhotos.length === 0) { resolve(); return; }
 
-    let loaded = 0; 
-    const total = placedPhotos.length;
-
-    const checkComplete = () => {
-      loaded++;
-      if (loaded >= total) {
-        if (!f.builtin && f.dataUrl) {
-          const overlay = new Image();
-          overlay.crossOrigin = "anonymous";
-          overlay.onload = () => { ctx.drawImage(overlay, 0, 0, W, H); resolve(); };
-          overlay.onerror = () => resolve();
-          overlay.src = f.dataUrl;
-        } else {
-          resolve();
-        }
-      }
-    };
-
+    let loaded=0; const total=placedPhotos.length;
     placedPhotos.forEach((item) => {
       const im = new Image();
-      im.crossOrigin = "anonymous";
       im.onload = () => {
         const renderX = item.x * scaleFactor;
         const renderY = item.y * scaleFactor;
@@ -1426,16 +1400,24 @@ function renderFinalCanvas(){
         }
 
         ctx.drawImage(im, sx, sy, sWidth, sHeight, renderX, renderY, renderW, renderH);
-        checkComplete();
+
+        loaded++;
+        if(loaded === total){
+          if(!f.builtin && f.dataUrl){
+            const overlay=new Image();
+            overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); resolve(); };
+            overlay.src=f.dataUrl;
+          } else { resolve(); }
+        }
       };
-      im.onerror = () => checkComplete();
-      im.src = state.photos[item.photoIdx] || item.src || '';
+      im.src = item.src || state.photos[item.photoIdx] || '';
     });
   });
 }
 
+/* PERBAIKAN: Fungsi Unduh HD (Kualitas PNG 1.0) */
 function safeDataUrl(){
-  const canvas = document.getElementById('finalCanvas');
+  const canvas=document.getElementById('finalCanvas');
   try{ return canvas.toDataURL('image/png', 1.0); } catch(e){ return null; }
 }
 
@@ -1443,60 +1425,39 @@ document.getElementById('downloadBtn').onclick=()=>{
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
   const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
 };
-
-document.getElementById('printBtn').onclick = () => {
+  // Fitur Cetak Foto (Print)
+  document.getElementById('printBtn').onclick = () => {
   const canvas = document.getElementById('finalCanvas');
   const printImg = document.getElementById('printImg');
+  
   if (!canvas || !printImg) return;
   
+  // 1. Ambil gambar dari canvas HD dan tempel ke area cetak
   printImg.src = canvas.toDataURL('image/png', 1.0);
-  setTimeout(() => { window.print(); }, 250);
+  
+  // 2. Beri jeda sebentar agar gambar termuat penuh, lalu buka jendela print browser
+  setTimeout(() => {
+    window.print();
+  }, 250);
 };
 
-/* UPLOAD FOTO HD KE FIRESTORE UNTUK SHARED RESULT */
+/* KIRIM KE HP & AMBIL KODE MANUAL (via koleksi terpisah shared_results) */
 async function pushFinalImageToShare(){
   if(!window.fbDb || !state.sessionId) return false;
-  
-  await renderFinalCanvas();
   const canvas = document.getElementById('finalCanvas');
-  
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
   try{
-    const rawDataUrl = canvas.toDataURL('image/png', 1.0);
-    const HDImage = await compressBase64(rawDataUrl, 1600, 0.92);
-
     const { doc, setDoc } = window.fbFirestoreTools;
-    const cleanCode = state.sessionId.trim().toUpperCase();
-
-    await setDoc(doc(window.fbDb, "shared_results", cleanCode), {
-      code: cleanCode,
-      image: HDImage,
+    await setDoc(doc(window.fbDb, "shared_results", state.sessionId), {
+      code: state.sessionId,
+      image: dataUrl,
       createdAt: Date.now()
     });
     return true;
   }catch(err){
-    console.error('Gagal upload foto HD ke shared_results:', err);
+    console.error('Gagal menyiapkan hasil untuk dikirim:', err);
     return false;
   }
-}
-
-function fetchSharedResult(code, onFound, onNotFound){
-  if(!window.fbDb || !code){ onNotFound(); return; }
-  
-  const { doc, getDoc } = window.fbFirestoreTools;
-  const cleanCode = code.trim().toUpperCase();
-
-  getDoc(doc(window.fbDb, "shared_results", cleanCode))
-    .then((docSnap) => {
-      if(docSnap.exists() && docSnap.data().image){
-        onFound(docSnap.data().image);
-      } else {
-        onNotFound();
-      }
-    })
-    .catch((err) => {
-      console.error("Error membaca Firestore di HP:", err);
-      onNotFound();
-    });
 }
 
 function showSendCodeBox(){
@@ -1504,23 +1465,21 @@ function showSendCodeBox(){
   const qrWrap = document.getElementById('qrWrap');
   const codeBoxText = document.getElementById('codeBoxText');
   const retryRow = document.getElementById('sendRetryRow');
-  
   codeBox.style.display = 'block';
   qrWrap.style.display = 'none';
   retryRow.style.display = 'none';
-  codeBoxText.textContent = '⏳ Memproses & mengunggah foto HD, mohon tunggu...';
+  codeBoxText.textContent = 'Menyiapkan hasil untuk dikirim…';
 
   pushFinalImageToShare().then((ok)=>{
     if(!ok){
-      codeBoxText.textContent = '❌ Gagal mengunggah foto. Cek koneksi internet lalu coba lagi.';
+      codeBoxText.textContent = 'Gagal menyiapkan pengiriman. Coba lagi.';
       retryRow.style.display = 'flex';
       return;
     }
-    
-    const url = location.origin + location.pathname + '?send=' + state.sessionId.trim().toUpperCase();
+    const url = location.origin + location.pathname + '?send=' + state.sessionId;
     document.getElementById('qrImg').src = qrImageUrl(url, 180);
     qrWrap.style.display = 'inline-block';
-    codeBoxText.innerHTML = '✨ Foto HD Siap! Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId.toUpperCase() + '</b>';
+    codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
   });
 }
 
@@ -1546,11 +1505,31 @@ function renderReceivedImage(container, dataUrl){
   container.appendChild(dlBtn);
 }
 
+function fetchSharedResult(code, onFound, onNotFound){
+  if(!window.fbDb || !code){ onNotFound(); return; }
+  const { doc, onSnapshot } = window.fbFirestoreTools;
+  let settled = false;
+  const unsub = onSnapshot(doc(window.fbDb, "shared_results", code.trim()), (docSnap)=>{
+    if(docSnap.exists() && docSnap.data().image){
+      settled = true;
+      unsub();
+      onFound(docSnap.data().image);
+    }
+  }, (err)=>{
+    // PENTING buat debugging: kalau di console browser muncul "permission-denied",
+    // artinya Firestore Security Rules belum mengizinkan READ pada koleksi shared_results
+    // (menulis/generate QR bisa saja tetap berhasil walau rules read-nya belum diizinkan).
+    console.error('Gagal membaca shared_results:', err && err.code, err);
+    if(!settled) onNotFound();
+  });
+
+  setTimeout(()=>{ if(!settled){ unsub(); onNotFound(); } }, 12000);
+}
+
 function startReceiveFlow(code){
   const statusEl = document.getElementById('receiveStatus');
   const resultEl = document.getElementById('receiveResult');
   statusEl.textContent = 'Mengambil fotomu…';
-  
   fetchSharedResult(code,
     (dataUrl)=>{
       statusEl.textContent = 'Ketemu! Ini hasil fotomu ✿';
@@ -1577,7 +1556,6 @@ document.getElementById('retrieveGoBtn').onclick = () => {
     ()=>{ statusEl.textContent = 'Kode tidak ditemukan atau sudah kedaluwarsa.'; }
   );
 };
-
 document.getElementById('backToFinalBtn').onclick = () => { showScreen('screen-final'); };
 
 document.getElementById('newSessionBtn').onclick=()=>{
@@ -1589,11 +1567,9 @@ document.getElementById('newSessionBtn').onclick=()=>{
 function loadHistory(){
   try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){ return []; }
 }
-
 function saveHistory(){
   try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0,HISTORY_MAX))); }catch(e){}
 }
-
 function makeThumbnail(sourceCanvas, maxW){
   try{
     const scale=maxW/sourceCanvas.width;
@@ -1603,14 +1579,11 @@ function makeThumbnail(sourceCanvas, maxW){
     return tc.toDataURL('image/jpeg',0.85);
   }catch(e){ return null; }
 }
-
 function addToHistory(dataUrl){
   state.history.unshift({id:'h'+Date.now(), dataUrl, time:Date.now()});
   saveHistory(); renderHistoryAll();
 }
-
 function renderHistoryAll(){ renderHistoryFull(); }
-
 function renderHistoryFull(){
   const wrap=document.getElementById('historyListFull'); if(!wrap) return;
   wrap.innerHTML='';
@@ -1624,6 +1597,7 @@ function renderHistoryFull(){
 document.getElementById('historyNavBtn').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
 document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-start'); };
 
+/* MODE "JADI KAMERA HP" via ?camera=ID & MODE TERIMA VIA QR via ?send=CODE */
 let cameraModeHostId = null;
 let cameraModeState = { peer: null, stream: null, call: null };
 
@@ -1695,6 +1669,29 @@ updateRoleUI();
 state.history = loadHistory();
 handleUrlParams();
 setTimeout(() => { runAutoCleanup(); }, 3000);
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDdzUi9J2Js-z_HV8F7ZUhdavDFVY_bSmE",
+    authDomain: "photobooth-5e183.firebaseapp.com",
+    projectId: "photobooth-5e183",
+    storageBucket: "photobooth-5e183.firebasestorage.app",
+    messagingSenderId: "1019097637387",
+    appId: "1:1019097637387:web:9358bbf539add509455d0e",
+    measurementId: "G-HCX9P41EFT"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.fbDb = db;
+  window.fbFirestoreTools = { collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDocs, query, where };
+
+  loadStoredFrames();
 </script>
 </body>
 </html>
