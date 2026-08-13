@@ -1546,17 +1546,42 @@ document.getElementById('sendRetryBtn').onclick = () => { showSendCodeBox(); };
 // 3. Perbaikan Pencarian Data di HP Penerima (Toleran terhadap delay jaringan)
 function fetchSharedResult(code, onFound, onNotFound){
   if(!window.fbDb || !code){ onNotFound(); return; }
-  const { doc, onSnapshot } = window.fbFirestoreTools;
+  const { doc, onSnapshot, getDoc } = window.fbFirestoreTools;
   let settled = false;
 
-  // Berikan timeout yang cukup (20 detik) untuk menunggu sync Firestore jika koneksi lambat
+  const cleanCode = code.trim();
+  const docRef = doc(window.fbDb, "shared_results", cleanCode);
+
+  // 1. Coba ambil langsung (One-time fetch) untuk respon cepat
+  getDoc(docRef).then((docSnap) => {
+    if(!settled && docSnap.exists() && docSnap.data().image){
+      settled = true;
+      clearTimeout(timeoutTimer);
+      onFound(docSnap.data().image);
+    }
+  }).catch(err => console.error("Direct fetch error:", err));
+
+  // 2. Pasang Listener Realtime jika fetch pertama butuh waktu
+  const unsub = onSnapshot(docRef, (docSnap) => {
+    if(!settled && docSnap.exists() && docSnap.data().image){
+      settled = true;
+      clearTimeout(timeoutTimer);
+      unsub();
+      onFound(docSnap.data().image);
+    }
+  }, (err) => {
+    console.error('Firestore Read Error:', err);
+  });
+
+  // Beri waktu tunggu hingga 25 detik sebelum menyerah
   const timeoutTimer = setTimeout(() => {
     if(!settled){
       settled = true;
       if(unsub) unsub();
       onNotFound();
     }
-  }, 20000);
+  }, 25000);
+}
 
   const unsub = onSnapshot(doc(window.fbDb, "shared_results", code.trim()), (docSnap) => {
     if(docSnap.exists() && docSnap.data().image){
