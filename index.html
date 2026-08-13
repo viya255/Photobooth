@@ -1462,19 +1462,20 @@ document.getElementById('downloadBtn').onclick=()=>{
 };
 
 /* KIRIM KE HP & AMBIL KODE MANUAL (via koleksi terpisah shared_results) */
-/* PUSH FOTO KE SHARED_RESULTS */
+/* PUSH FOTO KE SHARED_RESULTS (DENGAN KOMPRESI SINKRON & KAPITALISASI) */
 async function pushFinalImageToShare(){
   if(!window.fbDb || !state.sessionId) return false;
   const canvas = document.getElementById('finalCanvas');
   
   try{
     const rawDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    const compressedImage = await compressBase64(rawDataUrl, 1000, 0.80); // Dikecilkan dikit biar super cepat di-upload
+    // Kompresi dulu ke max 1000px agar payload kecil & instan ter-upload
+    const compressedImage = await compressBase64(rawDataUrl, 1000, 0.80);
 
     const { doc, setDoc } = window.fbFirestoreTools;
     const cleanCode = state.sessionId.trim().toUpperCase();
 
-    // Simpan dengan ID dokumen huruf KAPITAL
+    // Simpan dokumen di Firestore dengan ID HURUF KAPITAL
     await setDoc(doc(window.fbDb, "shared_results", cleanCode), {
       code: cleanCode,
       image: compressedImage,
@@ -1482,19 +1483,19 @@ async function pushFinalImageToShare(){
     });
     return true;
   }catch(err){
-    console.error('Gagal upload ke shared_results:', err);
+    console.error('Gagal upload foto ke shared_results:', err);
     return false;
   }
 }
 
-/* FETCH RESULT DI HP (DITAMBAH LOGGING & RETRY) */
+/* FETCH RESULT DI HP (SINGLE FUNCTION - TANPA TERTIMPA/DUPLIKAT) */
 function fetchSharedResult(code, onFound, onNotFound){
   if(!window.fbDb || !code){ onNotFound(); return; }
   
   const { doc, getDoc } = window.fbFirestoreTools;
   const cleanCode = code.trim().toUpperCase();
 
-  // Gunakan getDoc (sekali ambil) agar lebih stabil daripada listener realtime di HP
+  // Gunakan getDoc (sekali panggil) dengan kode uppercase agar pasti match
   getDoc(doc(window.fbDb, "shared_results", cleanCode))
     .then((docSnap) => {
       if(docSnap.exists() && docSnap.data().image){
@@ -1504,11 +1505,12 @@ function fetchSharedResult(code, onFound, onNotFound){
       }
     })
     .catch((err) => {
-      console.error("Error mengambil foto:", err);
+      console.error("Error membaca Firestore di HP:", err);
       onNotFound();
     });
 }
 
+/* TAMPILKAN QR BOX DI LAPTOP/IPAD */
 function showSendCodeBox(){
   const codeBox = document.getElementById('codeBox');
   const qrWrap = document.getElementById('qrWrap');
@@ -1516,72 +1518,31 @@ function showSendCodeBox(){
   const retryRow = document.getElementById('sendRetryRow');
   
   codeBox.style.display = 'block';
-  qrWrap.style.display = 'none'; // Sembunyikan QR dulu sampai upload selesai
+  qrWrap.style.display = 'none'; // Sembunyikan QR sebelum upload beres
   retryRow.style.display = 'none';
   codeBoxText.textContent = '⏳ Mengunggah foto ke cloud, mohon tunggu sebentar...';
 
   pushFinalImageToShare().then((ok)=>{
     if(!ok){
-      codeBoxText.textContent = '❌ Gagal mengunggah foto. Pastikan koneksi internet aktif lalu coba lagi.';
+      codeBoxText.textContent = '❌ Gagal mengunggah foto. Cek koneksi internet lalu coba lagi.';
       retryRow.style.display = 'flex';
       return;
     }
     
-    // SETELAH upload sukses, baru QR Code di-generate & ditampilkan
-    const url = location.origin + location.pathname + '?send=' + state.sessionId;
+    // Upload sukses -> baru QR dibuat & ditampilkan
+    const url = location.origin + location.pathname + '?send=' + state.sessionId.trim().toUpperCase();
     document.getElementById('qrImg').src = qrImageUrl(url, 180);
     qrWrap.style.display = 'inline-block';
-    codeBoxText.innerHTML = '✨ Foto Siap! Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
+    codeBoxText.innerHTML = '✨ Foto Siap! Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId.toUpperCase() + '</b>';
   });
 }
 
-document.getElementById('sendPhoneBtn').onclick = () => { showSendCodeBox(); };
-document.getElementById('sendRetryBtn').onclick = () => { showSendCodeBox(); };
-
-function renderReceivedImage(container, dataUrl){
-  container.innerHTML = '';
-  const img = document.createElement('img');
-  img.src = dataUrl;
-  img.style.cssText = 'width:100%; max-width:280px; border-radius:16px; box-shadow:var(--shadow); margin-bottom:14px;';
-  container.appendChild(img);
-
-  const dlBtn = document.createElement('button');
-  dlBtn.className = 'btn btn-primary';
-  dlBtn.textContent = '⬇ Simpan ke HP';
-  dlBtn.onclick = () => {
-    const a = document.createElement('a');
-    a.download = 'petal-booth-' + Date.now() + '.jpg';
-    a.href = dataUrl;
-    a.click();
-  };
-  container.appendChild(dlBtn);
-}
-
-function fetchSharedResult(code, onFound, onNotFound){
-  if(!window.fbDb || !code){ onNotFound(); return; }
-  const { doc, onSnapshot } = window.fbFirestoreTools;
-  let settled = false;
-  const unsub = onSnapshot(doc(window.fbDb, "shared_results", code.trim()), (docSnap)=>{
-    if(docSnap.exists() && docSnap.data().image){
-      settled = true;
-      unsub();
-      onFound(docSnap.data().image);
-    }
-  }, (err)=>{
-    // PENTING buat debugging: kalau di console browser muncul "permission-denied",
-    // artinya Firestore Security Rules belum mengizinkan READ pada koleksi shared_results
-    // (menulis/generate QR bisa saja tetap berhasil walau rules read-nya belum diizinkan).
-    console.error('Gagal membaca shared_results:', err && err.code, err);
-    if(!settled) onNotFound();
-  });
-
-  setTimeout(()=>{ if(!settled){ unsub(); onNotFound(); } }, 12000);
-}
-
+/* CEK PENERIMAAN FOTO DI HP */
 function startReceiveFlow(code){
   const statusEl = document.getElementById('receiveStatus');
   const resultEl = document.getElementById('receiveResult');
   statusEl.textContent = 'Mengambil fotomu…';
+  
   fetchSharedResult(code,
     (dataUrl)=>{
       statusEl.textContent = 'Ketemu! Ini hasil fotomu ✿';
