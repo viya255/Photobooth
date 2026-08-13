@@ -1354,19 +1354,26 @@ document.getElementById('resetZoomBtn').onclick = () => {
 
 document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
-  state.finalReady=false;
   setupEditorWorkspace();
 
   try{
+    // 1. Render gambar di canvas
     await renderFinalCanvas();
+    
+    // 2. Langsung aktifkan tombol simpan, cetak, & kirim ke HP tanpa nunggu listener
     enableActionButtons();
+    
+    // 3. Simpan ke riwayat lokal
     const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
     if(thumb) addToHistory(thumb);
 
+    // 4. Baru jalankan sinkronisasi background ke cloud
     pushRealtimeSessionState('Editor / Selesai');
     listenCurrentSessionLive();
   }catch(e){
-    alert('Gagal menyiapkan hasil akhir: '+e.message);
+    // Tetap aktifkan tombol agar pengguna tetap bisa bertransaksi meski sync cloud error
+    enableActionButtons();
+    console.error('Gagal menyiapkan hasil akhir:', e);
   }
 };
 
