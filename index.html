@@ -111,7 +111,8 @@
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   
   .monitor-list{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:12px;}
-  .monitor-card{background:var(--cream); border-radius:16px; padding:14px; border:1px solid var(--pink-deep); display:flex; gap:12px; align-items:center;}
+  .monitor-card{background:var(--cream); border-radius:16px; padding:14px; border:1px solid var(--pink-deep); display:flex; gap:12px; align-items:center; transition: transform .15s ease;}
+  .monitor-card:hover{transform: translateY(-2px);}
   .monitor-badge{background:var(--pink-deep); color:white; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; display:inline-block; margin-bottom:4px;}
 
   .editor-workspace { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; margin: 16px 0; }
@@ -301,7 +302,7 @@
 <div class="screen" id="screen-admin-monitor">
   <div class="card">
     <h2 style="margin-bottom:6px;">📡 Live Monitor Sesi Customer</h2>
-    <p class="lead">Pantau sesi foto pengguna secara real-time dari perangkat ini.</p>
+    <p class="lead">Pantau sesi foto pengguna secara real-time. Ketuk kartu sesi untuk membantu mengedit foto!</p>
     
     <div class="monitor-list" id="monitorList">
       <div style="text-align:center; color:var(--plum-soft); padding:20px;">Menghubungkan ke database live...</div>
@@ -496,7 +497,7 @@ const state = {
   manageFilterSlots: 3
 };
 
-/* SYNC FIREBASE DENGAN DATA RINGAN (BEBAS LIMIT) */
+/* SYNC FIREBASE TERMASUK FOTO MENTAH */
 async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId) return;
   try {
@@ -506,6 +507,7 @@ async function pushRealtimeSessionState(statusName) {
       status: statusName,
       photoCount: state.photos.length,
       maxPhotos: state.maxPhotos,
+      photos: state.photos, // Menyimpan array foto mentah
       updatedAt: Date.now()
     }, { merge: true });
   } catch(err) {
@@ -531,6 +533,7 @@ function listenToActiveSessions() {
       const data = docSnap.data();
       const card = document.createElement('div');
       card.className = 'monitor-card';
+      card.style.cursor = 'pointer';
 
       const timeAgo = Math.max(0, Math.round((Date.now() - (data.updatedAt || Date.now())) / 1000));
       
@@ -539,9 +542,34 @@ function listenToActiveSessions() {
         <div style="flex:1;">
           <span class="monitor-badge">${(data.status || 'Aktif').toUpperCase()}</span>
           <div style="font-size:14px; font-weight:700; margin-top:2px;">Sesi: ${data.sessionId}</div>
-          <div style="font-size:12px; color:var(--plum-soft);">Status: ${data.photoCount || 0}/${data.maxPhotos || 3} foto terfoto · ${timeAgo} dtk lalu</div>
+          <div style="font-size:12px; color:var(--plum-soft);">Progress: ${data.photoCount || 0}/${data.maxPhotos || 3} foto terfoto · ${timeAgo} dtk lalu</div>
         </div>
+        <button class="btn btn-ghost" style="padding: 6px 14px; font-size: 12px;">✏️ Bantu Edit</button>
       `;
+
+      // KLIK KARTU KURSUS/ADMIN UNTUK MENGEDIT FOTO SESI TERSEBUT
+      card.onclick = () => {
+        if (!data.photos || data.photos.length === 0) {
+          alert('Customer belum selesai mengambil foto pada sesi ini.');
+          return;
+        }
+
+        state.sessionId = data.sessionId;
+        state.maxPhotos = data.maxPhotos || data.photos.length;
+        state.photos = data.photos;
+
+        showScreen('screen-final');
+        state.finalReady = false;
+        setupEditorWorkspace();
+        
+        renderFinalCanvas().then(() => {
+          state.finalReady = true;
+          document.getElementById('downloadBtn').disabled = false;
+          document.getElementById('printBtn').disabled = false;
+          document.getElementById('sendPhoneBtn').disabled = false;
+        });
+      };
+
       monitorList.appendChild(card);
     });
   }, (err) => {
@@ -736,7 +764,7 @@ function takePhoto(w, h) {
   if (state.mirror) { ctx.translate(w, 0); ctx.scale(-1, 1); }
   ctx.drawImage(videoEl, 0, 0, w, h);
   
-  const dataUrl = canvas.toDataURL('image/png');
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
   state.pendingShot = dataUrl;
 
   const flash = document.getElementById('camFlash');
