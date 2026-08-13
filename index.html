@@ -984,7 +984,10 @@ document.querySelectorAll('.manage-filter-btn').forEach(btn => {
 });
 
 document.getElementById('manageFramesBtn').onclick=()=>{ buildManageFrameGallery(); showScreen('screen-manage-frames'); };
-document.getElementById('liveMonitorBtn').onclick=()=>{ listenToActiveSessions(); showScreen('screen-admin-monitor'); };
+document.getElementById('liveMonitorBtn').onclick = () => { 
+  listenToActiveSessions(); 
+  showScreen('screen-admin-monitor'); // <--- Menambahkan navigasi ke layar monitor admin
+};
 document.getElementById('backFromManageBtn').onclick=()=>{ showScreen('screen-start'); };
 document.getElementById('backFromMonitorBtn').onclick=()=>{ showScreen('screen-start'); };
 
@@ -1374,6 +1377,21 @@ function safeDataUrl(){
 document.getElementById('downloadBtn').onclick=()=>{
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
   const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
+};
+  // Fitur Cetak Foto (Print)
+  document.getElementById('printBtn').onclick = () => {
+  const canvas = document.getElementById('finalCanvas');
+  const printImg = document.getElementById('printImg');
+  
+  if (!canvas || !printImg) return;
+  
+  // 1. Ambil gambar dari canvas HD dan tempel ke area cetak
+  printImg.src = canvas.toDataURL('image/png', 1.0);
+  
+  // 2. Beri jeda sebentar agar gambar termuat penuh, lalu buka jendela print browser
+  setTimeout(() => {
+    window.print();
+  }, 250);
 };
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.selectedFrame=null; placedPhotos = [];
