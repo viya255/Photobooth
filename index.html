@@ -350,7 +350,7 @@
   <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
   <div class="card" style="text-align:center;">
     <h2>Selesai! Cantik sekali ✨</h2>
-    <p class="lead">Geser tengah foto untuk memindahkan. Pilih foto lalu gunakan tombol **Zoom (+/-)** di bawah untuk memperbesar/memperkecil foto.</p>
+    <p class="lead">Geser tengah foto untuk memindahkan. Tarik ikon panah (⤢) di pojok foto atau gunakan tombol **Zoom (+/-)** di bawah untuk memperbesar/memperkecil foto.</p>
 
     <div class="editor-workspace">
       <div class="strip-preview" id="stripPreviewFinal"></div>
@@ -560,7 +560,7 @@ function listenCurrentSessionLive() {
 
   if (state.liveUnsubscribe) state.liveUnsubscribe();
 
-  state.liveUnsubscribe = onSnapshot(doc(window.fbDb, "active_sessions", state.sessionId), (docSnap) => {
+  state.liveUnsubscribe = onSnapshot(doc(window.fbDb, "active_sessions", state.sessionId), async (docSnap) => {
     if (!docSnap.exists()) return;
     const data = docSnap.data();
 
@@ -589,12 +589,19 @@ function listenCurrentSessionLive() {
     buildEditorFrameSelector();
     renderFreeEditor();
     
-    if (state.finalReady) {
-      renderFinalCanvas();
-    }
+    // PERBAIKAN ADMIN: Render canvas & aktifkan tombol aksi saat live sync
+    await renderFinalCanvas();
+    enableActionButtons();
 
     setTimeout(() => { state.isUpdatingFromLive = false; }, 100);
   });
+}
+
+function enableActionButtons() {
+  state.finalReady = true;
+  document.getElementById('downloadBtn').disabled = false;
+  document.getElementById('printBtn').disabled = false;
+  document.getElementById('sendPhoneBtn').disabled = false;
 }
 
 async function deleteSessionFromFirebase(sessionId) {
@@ -1130,6 +1137,42 @@ function renderFreeEditor(){
     const resizeHandle = document.createElement('div');
     resizeHandle.className = 'photo-resize-handle';
     resizeHandle.textContent = '⤢';
+
+    let isResizing = false, startRClientX = 0, initialScale = 1.0;
+
+    const onResizeDown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizing = true;
+      selectedPlacedPhotoId = item.id;
+      
+      startRClientX = e.clientX || (e.touches && e.touches[0].clientX);
+      initialScale = item.scale;
+
+      const onResizeMove = (moveEv) => {
+        if (!isResizing) return;
+        const curX = moveEv.clientX || (moveEv.touches && moveEv.touches[0].clientX);
+        const deltaX = curX - startRClientX;
+        
+        let newScale = initialScale + (deltaX / 100);
+        item.scale = Math.max(0.4, Math.min(3.0, newScale));
+        
+        renderFreeEditor();
+        if (state.finalReady) renderFinalCanvas();
+      };
+
+      const onResizeUp = () => {
+        isResizing = false;
+        window.removeEventListener('pointermove', onResizeMove);
+        window.removeEventListener('pointerup', onResizeUp);
+        pushRealtimeSessionState('Resize Foto via Handle');
+      };
+
+      window.addEventListener('pointermove', onResizeMove);
+      window.addEventListener('pointerup', onResizeUp);
+    };
+
+    resizeHandle.addEventListener('pointerdown', onResizeDown);
     el.appendChild(resizeHandle);
 
     el.onwheel = (e) => {
@@ -1227,10 +1270,7 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
 
   try{
     await renderFinalCanvas();
-    state.finalReady=true;
-    document.getElementById('downloadBtn').disabled=false;
-    document.getElementById('printBtn').disabled=false;
-    document.getElementById('sendPhoneBtn').disabled=false;
+    enableActionButtons();
     const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
     if(thumb) addToHistory(thumb);
 
@@ -1241,6 +1281,7 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   }
 };
 
+/* PERBAIKAN FOTO PENYET: Render Canvas dengan Aspect Ratio Preserved (Crop Center) */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
     const canvas=document.getElementById('finalCanvas');
@@ -1270,7 +1311,25 @@ function renderFinalCanvas(){
         const renderW = item.w * item.scale * scaleFactor;
         const renderH = item.h * item.scale * scaleFactor;
 
-        ctx.drawImage(im, renderX, renderY, renderW, renderH);
+        // Teknik Object-Fit Cover untuk Canvas
+        const imgRatio = im.width / im.height;
+        const targetRatio = renderW / renderH;
+
+        let sx, sy, sWidth, sHeight;
+        if (imgRatio > targetRatio) {
+          sHeight = im.height;
+          sWidth = im.height * targetRatio;
+          sx = (im.width - sWidth) / 2;
+          sy = 0;
+        } else {
+          sWidth = im.width;
+          sHeight = im.width / targetRatio;
+          sx = 0;
+          sy = (im.height - sHeight) / 2;
+        }
+
+        ctx.drawImage(im, sx, sy, sWidth, sHeight, renderX, renderY, renderW, renderH);
+
         loaded++;
         if(loaded === total){
           if(!f.builtin && f.dataUrl){
