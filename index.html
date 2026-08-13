@@ -1415,15 +1415,30 @@ function renderFinalCanvas(){
   });
 }
 
-/* PERBAIKAN: Fungsi Unduh HD (Kualitas PNG 1.0) */
-function safeDataUrl(){
-  const canvas=document.getElementById('finalCanvas');
-  try{ return canvas.toDataURL('image/png', 1.0); } catch(e){ return null; }
-}
+/* PERBAIKAN: Fungsi Unduh HD KHUSUS SIMPAN KE PERANGKAT (Render Ulang Skala 2x: 2400 x 6000 px) */
+document.getElementById('downloadBtn').onclick = () => {
+  const originalCanvas = document.getElementById('finalCanvas');
+  if (!originalCanvas) return;
 
-document.getElementById('downloadBtn').onclick=()=>{
-  const dataUrl=safeDataUrl(); if(!dataUrl) return;
-  const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
+  const hdCanvas = document.createElement('canvas');
+  hdCanvas.width = 2400;  
+  hdCanvas.height = 6000; 
+  const hdCtx = hdCanvas.getContext('2d');
+
+  hdCtx.imageSmoothingEnabled = true;
+  hdCtx.imageSmoothingQuality = 'high';
+
+  hdCtx.drawImage(originalCanvas, 0, 0, hdCanvas.width, hdCanvas.height);
+
+  try {
+    const hdDataUrl = hdCanvas.toDataURL('image/png', 1.0);
+    const a = document.createElement('a');
+    a.download = 'petal-booth-hd-' + Date.now() + '.png';
+    a.href = hdDataUrl;
+    a.click();
+  } catch (e) {
+    alert('Gagal mengunduh file HD: ' + e.message);
+  }
 };
 
 // Fitur Cetak Foto (Print)
