@@ -1,465 +1,3 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>✿ Petal Booth ✿</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Quicksand:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --pink:#F9E1EA; --pink-deep:#E9A6BC; --lavender:#E7DEF9; --lavender-deep:#B9A3E3;
-    --mint:#DFF3E7; --cream:#FFF9F2; --gold:#D9B26E; --plum:#5B4B66; --plum-soft:#8A7594;
-    --white:#FFFEFC; --shadow: 0 10px 30px rgba(150,110,140,0.18); --danger:#D97A7A;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    min-height:100vh;
-    background:
-      radial-gradient(circle at 10% 10%, var(--pink) 0%, transparent 45%),
-      radial-gradient(circle at 90% 15%, var(--lavender) 0%, transparent 45%),
-      radial-gradient(circle at 20% 90%, var(--mint) 0%, transparent 45%),
-      var(--cream);
-    font-family:'Quicksand', sans-serif; color:var(--plum);
-    display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
-  }
-  
-  body.minimal-mode .top-nav,
-  body.minimal-mode .brand,
-  body.minimal-mode .history-scatter,
-  body.minimal-mode .history-fab {
-    display: none !important;
-  }
-  body.minimal-mode {
-    padding-top: 40px;
-    justify-content: center;
-  }
-
-  .mode-badge {
-    background: var(--plum); color: white; padding: 4px 12px; border-radius: 99px;
-    font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;
-  }
-  .mode-badge.admin { background: #5B4B66; }
-  .mode-badge.booth { background: var(--pink-deep); }
-
-  h1,h2,h3{font-family:'Fraunces', serif; font-weight:600; margin:0;}
-  .brand{display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;}
-  .brand .mark{font-size:26px;}
-  .brand h1{font-size:26px; letter-spacing:0.5px; color:var(--plum);}
-  .brand .tag{font-family:'Caveat',cursive; font-size:18px; color:var(--pink-deep); margin-left:6px;}
-  .screen{width:100%; max-width:640px; display:none; flex-direction:column; align-items:center; animation:fadeIn .45s ease;}
-  .screen.active{display:flex;}
-  @keyframes fadeIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
-  .card{background:var(--white); border-radius:26px; box-shadow:var(--shadow); padding:28px 24px; width:100%; position:relative; border:1px solid rgba(233,166,188,0.25);}
-  .card::before{content:"❀"; position:absolute; top:-16px; left:24px; background:var(--pink); color:var(--pink-deep); width:32px;height:32px;border-radius:50%; display:flex;align-items:center;justify-content:center; font-size:15px; box-shadow:var(--shadow);}
-  p.lead{color:var(--plum-soft); line-height:1.55; font-size:15px;}
-  .btn{font-family:'Quicksand',sans-serif; font-weight:700; font-size:15px; border:none; border-radius:999px; padding:13px 26px; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; letter-spacing:0.2px;}
-  .btn:active{transform:scale(0.96);}
-  .btn-primary{background:linear-gradient(135deg, var(--pink-deep), var(--lavender-deep)); color:white; box-shadow:0 8px 18px rgba(185,163,227,0.45);}
-  .btn-ghost{background:var(--white); color:var(--plum); border:2px solid var(--pink);}
-  .btn-ghost:hover{border-color:var(--pink-deep);}
-  .btn-ghost.active {
-    background: var(--pink-deep) !important;
-    color: white !important;
-    border-color: var(--pink-deep) !important;
-  }
-  .btn-soft{background:var(--mint); color:var(--plum);}
-  .btn-danger{background:var(--white); color:var(--danger); border:2px solid var(--danger);}
-  .btn-row{display:flex; gap:12px; margin-top:20px; flex-wrap:wrap; justify-content:center;}
-  .btn[disabled]{opacity:.45; cursor:not-allowed;}
-  .start-grid{display:grid; gap:14px; width:100%; margin-top:10px;}
-  .start-option{display:flex; align-items:center; gap:14px; background:var(--white); border:2px solid var(--pink); border-radius:20px; padding:16px 18px; cursor:pointer; box-shadow:var(--shadow); text-align:left;}
-  .start-option:hover{border-color:var(--pink-deep);}
-  .start-option .ic{font-size:26px;}
-  .start-option .txt b{display:block; font-size:16px;}
-  .start-option .txt span{font-size:13px; color:var(--plum-soft);}
-  .stepper{display:flex; gap:8px; margin-bottom:22px;}
-  .stepper .dot{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--pink); color:var(--pink-deep); font-weight:700; font-size:13px; border:2px solid transparent;}
-  .stepper .dot.done{background:var(--pink-deep); color:white;}
-  .stepper .dot.now{border-color:var(--pink-deep); background:white; color:var(--pink-deep);}
-  .cam-wrap{position:relative; width:100%; max-width:480px; aspect-ratio:4/3; border-radius:22px; overflow:hidden; background:#2b2130; box-shadow:var(--shadow); border:6px solid white; display:flex; align-items:center; justify-content:center;}
-  .cam-wrap video{width:100%; height:100%; object-fit:cover; display:block;}
-  .cam-wrap video.video-mirrored{transform:scaleX(-1);}
-  .cam-flash{position:absolute; inset:0; background:white; opacity:0; pointer-events:none;}
-  .cam-flash.flash{animation:flashPop .35s ease;}
-  @keyframes flashPop{0%{opacity:.9;}100%{opacity:0;}}
-  .shots-row{display:flex; gap:10px; margin-top:16px;}
-  .shot-slot{width:56px; height:56px; border-radius:14px; background:var(--pink); border:2px dashed var(--pink-deep); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:11px; color:var(--pink-deep);}
-  .shot-slot img{width:100%; height:100%; object-fit:cover;}
-  .shutter{width:74px; height:74px; border-radius:50%; border:5px solid var(--pink-deep); background:white; display:flex; align-items:center; justify-content:center; font-size:26px; cursor:pointer; margin-top:18px; box-shadow:0 10px 22px rgba(233,166,188,0.5); transition:transform .12s ease;}
-  .shutter:active{transform:scale(.92);}
-  .shutter[disabled]{opacity:.35; cursor:not-allowed;}
-  .cam-source-toggle{display:flex; gap:8px; margin-bottom:14px; font-size:13px; width:100%; max-width:480px; flex-wrap:wrap;}
-  .cam-source-toggle button{padding:8px 14px; border-radius:999px; border:2px solid var(--pink); background:white; cursor:pointer; font-family:'Quicksand'; font-weight:600; color:var(--plum-soft);}
-  .cam-source-toggle button.active{background:var(--pink-deep); color:white; border-color:var(--pink-deep);}
-  .cam-source-toggle button#mirrorToggleBtn{margin-left:auto;}
-  details.help{width:100%; max-width:480px; margin-bottom:14px; background:var(--lavender); border-radius:14px; padding:10px 14px; font-size:13px; color:var(--plum-soft);}
-  details.help summary{cursor:pointer; font-weight:700; color:var(--plum);}
-  details.help ol{margin:8px 0 2px; padding-left:18px; line-height:1.7;}
-  .overlay{position:fixed; inset:0; background:rgba(91,75,102,0.55); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; z-index:50; padding:20px;}
-  .overlay.show{display:flex;}
-  .review-card {
-  background: white; 
-  border-radius: 24px; 
-  padding: 20px; 
-  max-width: 420px; 
-  width: 100%; 
-  max-height: 90vh; /* Agar pop-up tidak melebihi tinggi layar */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-shadow: var(--shadow); 
-  text-align: center;
-}
-
-.review-card img {
-  max-height: 55vh; /* Membatasi tinggi gambar portrait agar tombol di bawahnya selalu kelihatan */
-  width: auto;
-  max-width: 100%;
-  object-fit: contain;
-  border-radius: 16px; 
-  margin: 0 auto 16px;
-}
-  
-  .frame-gallery{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; margin-top:8px;}
-  .frame-thumb{border-radius:16px; overflow:hidden; cursor:pointer; border:3px solid transparent; position:relative; aspect-ratio:2/5; display:flex; align-items:center; justify-content:center; font-size:11px; text-align:center; padding:6px; background-position:center; background-size:cover;}
-  .frame-thumb.selected{border-color:var(--pink-deep); box-shadow:0 0 0 3px rgba(233,166,188,.35);}
-  .frame-thumb span.label{position:absolute; bottom:4px; left:4px; right:4px; background:rgba(255,255,255,.85); border-radius:8px; padding:2px 4px; font-weight:700; color:var(--plum);}
-  .frame-thumb .del-btn{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:var(--danger); color:white; border:none; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2;}
-  .upload-frame-tile{border:2px dashed var(--pink-deep); border-radius:16px; aspect-ratio:2/5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--pink-deep); font-size:12px; font-weight:700; background:var(--pink);}
-  .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
-  
-  .monitor-list{display:flex; flex-direction:column; gap:16px; width:100%; margin-top:12px;}
-  .monitor-card{background:var(--cream); border-radius:20px; padding:18px; border:1px solid var(--pink-deep); display:flex; flex-direction:column; gap:12px;}
-  .monitor-badge{background:var(--pink-deep); color:white; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; display:inline-block; margin-bottom:4px;}
-
-  .editor-workspace { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; margin: 16px 0; }
-  .strip-preview { width: 220px; height: 550px; border-radius: 14px; position: relative; overflow: hidden; box-shadow: var(--shadow); background: #ffffff; flex-shrink: 0; touch-action: none; user-select: none; }
-  .free-photo-layer { position: absolute; inset: 0; z-index: 1; touch-action: none; }
-  .placed-photo { position: absolute; cursor: grab; user-select: none; touch-action: none; z-index: 1; }
-  .placed-photo:active { cursor: grabbing; }
-  .placed-photo img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: block; }
-  .placed-photo .photo-del-btn { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: white; border: none; font-size: 11px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 30; pointer-events: auto; }
-  .placed-photo .photo-resize-handle { position: absolute; bottom: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: var(--pink-deep); color: white; border: 2px solid white; font-size: 12px; cursor: nwse-resize; display: none; align-items: center; justify-content: center; z-index: 30; pointer-events: auto; touch-action: none; }
-  .placed-photo:hover .photo-del-btn, .placed-photo.selected .photo-del-btn, .placed-photo:hover .photo-resize-handle, .placed-photo.selected .photo-resize-handle { display: flex; }
-  .placed-photo.selected { outline: 2px dashed var(--pink-deep); }
-  .strip-preview .frame-overlay-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none !important; z-index: 10 !important; }
-  .frame-mini-selector { display: flex; gap: 10px; overflow-x: auto; width: 100%; max-width: 380px; padding: 8px 4px; }
-  .frame-mini-card { min-width: 65px; height: 110px; border-radius: 10px; border: 2px solid var(--pink); cursor: pointer; background-size: cover; background-position: center; position: relative; flex-shrink: 0; }
-  .frame-mini-card.selected { border-color: var(--pink-deep); box-shadow: 0 0 0 3px rgba(233,166,188,0.5); }
-
-  .zoom-controls { display: flex; gap: 8px; align-items: center; justify-content: center; background: var(--cream); border: 1px solid var(--pink-deep); border-radius: 99px; padding: 4px 12px; margin-top: 4px; }
-  .zoom-btn { background: white; border: 1px solid var(--pink-deep); color: var(--plum); font-weight: 700; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-  .zoom-btn:active { transform: scale(0.92); }
-
-  #finalCanvas{max-width:220px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;}
-  .code-box{background:var(--lavender); border-radius:16px; padding:18px 20px; text-align:center; margin-top:16px; width:100%;}
-  .code-box p{margin:10px 0 0; font-size:13px; color:var(--plum-soft);}
-  #qrWrap, .qr-box{background:white; border-radius:14px; padding:12px; display:inline-block;}
-  #qrWrap{display:none;}
-  .qr-box img{width:180px; height:180px; display:block;}
-  .retrieve-form{display:flex; gap:10px; width:100%; margin-top:16px;}
-  .retrieve-form input{flex:1; padding:14px; border-radius:14px; border:2px solid var(--pink); font-size:14px; text-align:center; font-family:'Quicksand',sans-serif;}
-  .top-nav{display:flex; justify-content:space-between; width:100%; max-width:640px; margin-bottom:10px; flex-wrap:wrap; gap:8px;}
-  .top-nav .nav-right{display:flex; gap:12px; flex-wrap:wrap;}
-  .link-btn{background:none; border:none; color:var(--plum-soft); font-family:'Quicksand'; font-weight:600; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:4px;}
-  .link-btn:hover{color:var(--pink-deep);}
-  .status-msg{font-size:13px; color:var(--plum-soft); margin-top:10px; min-height:16px; text-align:center;}
-  .status-msg.error{color:var(--danger); font-weight:700;}
-
-  /* Riwayat */
-  .history-scatter{position:fixed; top:96px; bottom:96px; width:210px; pointer-events:none; z-index:15;}
-  .history-scatter.left{left:0;}
-  .history-scatter.right{right:0;}
-  .history-scatter .history-item{ position:absolute; pointer-events:auto; width:74px; border-radius:10px; overflow:hidden; border:3px solid white; box-shadow:0 8px 18px rgba(90,70,90,.22); cursor:grab; touch-action:none; user-select:none; transition:box-shadow .2s ease; }
-  .history-scatter .history-item.dragging{cursor:grabbing; box-shadow:0 16px 30px rgba(90,70,90,.4); z-index:10; transition:none;}
-  .history-scatter .history-item:hover{ box-shadow:0 14px 28px rgba(90,70,90,.34); z-index:5; }
-  .history-scatter .history-item img{width:100%; display:block; pointer-events:none; -webkit-user-drag:none;}
-  .history-scatter .history-item .hist-del{ position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--danger); color:#fff; border:none; font-size:10px; display:none; align-items:center; justify-content:center; cursor:pointer; line-height:1; }
-  .history-scatter .history-item:hover .hist-del{display:flex;}
-  .history-fab{ position:fixed; right:16px; bottom:16px; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg, var(--pink-deep), var(--lavender-deep)); color:#fff; border:none; box-shadow:var(--shadow); font-size:20px; display:none; align-items:center; justify-content:center; cursor:pointer; z-index:25; }
-  .history-empty{font-size:12px; color:var(--plum-soft); text-align:center; padding:14px 6px; line-height:1.5;}
-  @media (max-width:1100px){ .history-scatter{display:none;} .history-fab{display:flex;} }
-
-  .history-list-full{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:12px;}
-  .history-row{display:flex; align-items:center; gap:14px; background:var(--cream); border-radius:16px; padding:10px 12px; border:1px solid rgba(233,166,188,.3);}
-  .history-row img{width:52px; border-radius:10px; box-shadow:0 3px 8px rgba(0,0,0,.12); flex-shrink:0;}
-  .history-row .meta{flex:1; font-size:13px; color:var(--plum); min-width:0;}
-  .history-row .meta b{display:block; font-size:14px; font-family:'Fraunces',serif; font-weight:600;}
-  .history-row .meta span{color:var(--plum-soft); font-size:12px;}
-  .history-row .row-actions{display:flex; gap:6px; flex-shrink:0;}
-  .history-row .row-actions button{width:32px; height:32px; border-radius:999px; background:var(--white); border:2px solid var(--pink); color:var(--plum); font-size:13px; cursor:pointer;}
-  .history-row .row-actions button.del{border-color:var(--danger); color:var(--danger);}
-
- #printArea{display:none;}
-  @media print{
-    @page { margin: 0; size: auto; }
-    body *{visibility:hidden;}
-    #printArea, #printArea *{visibility:visible;}
-    #printArea{
-      display:block !important; 
-      position:fixed; 
-      top:0; 
-      left:0; 
-      width: 2in; 
-      height: 5in;
-    }
-    #printArea img{
-      width: 100%; 
-      height: 100%; 
-      object-fit: contain;
-      image-rendering: -webkit-optimize-contrast;
-    }
-  }
-</style>
-</head>
-<body>
-
-<div class="history-scatter left" id="historyScatterLeft"></div>
-<div class="history-scatter right" id="historyScatterRight"></div>
-<button class="history-fab" id="historyFab" title="Riwayat">🗂️</button>
-
-<div class="top-nav">
-  <div>
-    <button class="link-btn" id="homeBtn">🏠 Beranda</button>
-  </div>
-  <div class="nav-right">
-    <span class="mode-badge booth" id="modeBadge">📱 Device Booth</span>
-    <button class="link-btn" id="toggleRoleBtn">🔐 Ganti Mode (Admin/Booth)</button>
-    
-    <button class="link-btn admin-only" id="liveMonitorBtn" style="display:none;">📡 Pantau Sesi Live</button>
-    <button class="link-btn admin-only" id="manageFramesBtn" style="display:none;">🖼️ Kelola Frame</button>
-    <button class="link-btn" id="historyNavBtn">🗂️ Riwayat</button>
-  </div>
-</div>
-
-<div class="brand" id="brandClick">
-  <span class="mark">🌷</span><h1>Petal Booth</h1><span class="tag">say cheese, sayang~</span>
-</div>
-
-<!-- START -->
-<div class="screen active" id="screen-start">
-  <div class="card">
-    <h2 style="margin-bottom:6px;">Mulai sesi foto</h2>
-    <p class="lead">Pilih berapa kali kamu ingin memotret, lalu pilih frame kesukaanmu. ✿</p>
-    
-    <div class="start-grid">
-      <div class="start-option" id="optBuiltin">
-        <span class="ic">💻</span>
-        <div class="txt"><b>Kamera perangkat ini</b><span>Pakai webcam laptop / iPad langsung</span></div>
-      </div>
-      <div class="start-option" id="optPhone">
-        <span class="ic">📱</span>
-        <div class="txt"><b>Kamera HP (live, scan QR)</b><span>HP lain jadi kamera photobooth</span></div>
-      </div>
-    </div>
-
-    <div class="photo-count-selector" style="margin-top: 20px; text-align: center;">
-      <label style="font-weight: 700; display: block; margin-bottom: 8px;">Target Jepretan Foto:</label>
-      <div class="btn-row" style="margin-top: 0;">
-        <button class="btn btn-ghost photo-count-btn active" data-count="3" type="button">3 Jepretan</button>
-        <button class="btn btn-ghost photo-count-btn" data-count="4" type="button">4 Jepretan</button>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" id="startBtn">Mulai Foto →</button>
-    </div>
-  </div>
-</div>
-
-<!-- CAPTURE -->
-<div class="screen" id="screen-capture">
-  <div class="stepper"><div class="dot now">📷</div><div class="dot">🖼️</div><div class="dot">✓</div></div>
-  <div class="cam-source-toggle">
-    <button id="srcBuiltinBtn" class="active">Kamera Perangkat</button>
-    <button id="srcPhoneBtn">Kamera HP (Live)</button>
-    <button id="mirrorToggleBtn" type="button">🪞 Cermin: Aktif</button>
-  </div>
-
-  <details class="help" id="helpBuiltin">
-    <summary>Kamera perangkat tidak muncul / diblokir?</summary>
-    <ol>
-      <li>Saat pertama kali dibuka, browser akan menampilkan pop-up izin kamera — tekan <b>Allow / Izinkan</b>.</li>
-      <li>Jika ditolak: klik ikon 🔒 / ⓘ di sebelah kiri address bar browser, lalu izinkan akses Kamera.</li>
-    </ol>
-  </details>
-  <details class="help" id="helpPhone" style="display:none;">
-    <summary>Cara pakai kamera HP lain</summary>
-    <ol>
-      <li>Tekan "Kamera HP (Live)" — Kode QR khusus akan muncul di layar iPad/Laptop ini.</li>
-      <li>Buka kamera bawaan di HP yang dijadikan kamera, scan QR tersebut, lalu buka link webnya.</li>
-      <li>Tekan "Izinkan Kamera & Mulai" di HP. Gambar kamera HP akan otomatis tampil *live* di layar iPad/Laptop ini.</li>
-    </ol>
-  </details>
-
-  <div id="phoneQrArea" style="display:none; text-align:center; margin-bottom:14px;">
-    <div class="qr-box"><img id="camQrImg" alt="QR kamera HP"></div>
-    <p class="status-msg" id="camPairStatus">Menyiapkan kode QR…</p>
-  </div>
-
-  <div class="cam-wrap" id="camWrap">
-    <video id="video" autoplay playsinline muted></video>
-    <div class="cam-flash" id="camFlash"></div>
-  </div>
-  <div class="status-msg" id="camStatus">Menyiapkan kamera…</div>
-  <button class="shutter" id="shutterBtn" disabled>📸</button>
-  <div class="shots-row" id="shotsRow"></div>
-</div>
-
-<!-- BE THE CAMERA -->
-<div class="screen" id="screen-be-camera">
-  <div class="card" style="text-align:center;">
-    <h2>📷 Kamera Photobooth</h2>
-    <p class="lead">HP ini terhubung sebagai kamera. Semua pengaturan & tombol jepret ada di layar iPad/Laptop.</p>
-    <video id="selfPreview" autoplay playsinline muted style="width:100%; max-width:320px; border-radius:16px; background:#2b2130; aspect-ratio:4/3; object-fit:cover; margin: 12px 0;"></video>
-    <div class="btn-row"><button class="btn btn-primary" id="beCameraStartBtn">🎥 Aktifkan Kamera HP</button></div>
-    <p class="status-msg" id="beCameraStatus"></p>
-  </div>
-</div>
-
-<!-- FRAME -->
-<div class="screen" id="screen-frame">
-  <div class="stepper"><div class="dot done">📷</div><div class="dot now">🖼️</div><div class="dot">✓</div></div>
-  <div class="card">
-    <h2>Pilih frame favoritmu</h2>
-    <p class="lead" id="frameSelectLead">Menampilkan frame yang sesuai pilihan jepretan.</p>
-    <div class="frame-gallery" id="frameGallery"></div>
-
-    <div class="btn-row">
-      <button class="btn btn-ghost" id="backToCaptureBtn">← Foto Ulang</button>
-      <button class="btn btn-primary" id="toFinalBtn">Lanjut →</button>
-    </div>
-  </div>
-</div>
-
-<!-- LIVE MONITORING SCREEN (KHUSUS ADMIN) -->
-<div class="screen" id="screen-admin-monitor">
-  <div class="card">
-    <h2 style="margin-bottom:6px;">📡 Live Monitor Sesi Customer</h2>
-    <p class="lead">Memantau seluruh aktivitas customer secara real-time tanpa perlu refresh!</p>
-    
-    <div class="monitor-list" id="monitorList">
-      <div style="text-align:center; color:var(--plum-soft); padding:20px;">Menghubungkan ke database live...</div>
-    </div>
-
-    <div class="btn-row" style="margin-top:20px;">
-      <button class="btn btn-ghost" id="backFromMonitorBtn">← Kembali ke Beranda</button>
-    </div>
-  </div>
-</div>
-
-<!-- MANAGE FRAMES -->
-<div class="screen" id="screen-manage-frames">
-  <div class="card">
-    <h2 style="margin-bottom:6px;">Kelola Frame (Admin)</h2>
-    <p class="lead">Tambah atau hapus frame. Frame akan otomatis tersinkron ke semua perangkat!</p>
-    
-    <div style="text-align:center; margin-bottom:12px;">
-      <button class="btn btn-ghost manage-filter-btn active" data-slots="3" type="button">Frame 3 Jepretan</button>
-      <button class="btn btn-ghost manage-filter-btn" data-slots="4" type="button">Frame 4 Jepretan</button>
-    </div>
-
-    <div class="frame-gallery" id="manageFrameGallery"></div>
-    <input type="file" id="frameUpload" accept="image/png,image/jpeg" style="display:none;">
-    <div class="frame-size-note" id="frameSizeNote"></div>
-    <div class="btn-row"><button class="btn btn-ghost" id="backFromManageBtn">← Kembali ke Beranda</button></div>
-  </div>
-</div>
-
-<!-- RIWAYAT -->
-<div class="screen" id="screen-history">
-  <div class="card">
-    <h2 style="margin-bottom:6px;">Riwayat Foto</h2>
-    <p class="lead">Daftar foto yang tersimpan di perangkat ini.</p>
-    <div class="history-list-full" id="historyListFull"></div>
-    <div class="btn-row"><button class="btn btn-ghost" id="backFromHistoryBtn">← Kembali ke Beranda</button></div>
-  </div>
-</div>
-
-<!-- FINAL -->
-<div class="screen" id="screen-final">
-  <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
-  <div class="card" style="text-align:center;">
-    <h2>Selesai! Cantik sekali ✨</h2>
-    <p class="lead">Geser tengah foto untuk memindahkan. Tarik ikon panah (⤢) di pojok foto atau gunakan tombol **Zoom (+/-)** di bawah untuk memperbesar/memperkecil foto.</p>
-
-    <div class="editor-workspace">
-      <div class="strip-preview" id="stripPreviewFinal"></div>
-
-      <div class="zoom-controls">
-        <span style="font-size:12px; font-weight:700; color:var(--plum);">🔍 Zoom Foto Terpilih:</span>
-        <button class="zoom-btn" id="zoomOutBtn" type="button" title="Perkecil Foto">-</button>
-        <button class="zoom-btn" id="zoomInBtn" type="button" title="Perbesar Foto">+</button>
-        <button class="btn btn-ghost" id="resetZoomBtn" type="button" style="padding: 4px 10px; font-size: 11px;">Reset</button>
-      </div>
-
-      <div style="width:100%; max-width:380px; text-align:left;">
-        <label style="font-size:12px; font-weight:700; color:var(--plum);">🖼️ Ganti Frame:</label>
-        <div class="frame-mini-selector" id="editorFrameSelector"></div>
-      </div>
-    </div>
-
-    <canvas id="finalCanvas" width="1200" height="3000" style="display:none;"></canvas>
-    <div id="printArea"><img id="printImg"></div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" id="downloadBtn" disabled>⬇ Simpan ke Perangkat</button>
-      <button class="btn btn-soft" id="printBtn" disabled>🖨 Cetak</button>
-      <button class="btn btn-ghost" id="sendPhoneBtn" disabled>📱 Kirim ke HP</button>
-    </div>
-
-    <div class="code-box" id="codeBox" style="display:none;">
-      <div class="qr-box" id="qrWrap"><img id="qrImg" alt="QR kirim ke HP"></div>
-      <p id="codeBoxText">Menyiapkan koneksi…</p>
-      <div class="btn-row" id="sendRetryRow" style="display:none;">
-        <button class="btn btn-ghost" id="sendRetryBtn">↻ Coba Lagi</button>
-      </div>
-    </div>
-
-    <div class="btn-row"><button class="btn btn-ghost" id="newSessionBtn">↻ Sesi Baru</button></div>
-  </div>
-</div>
-
-<!-- RETRIEVE MANUAL CODE -->
-<div class="screen" id="screen-retrieve">
-  <div class="card" style="text-align:center;">
-    <h2>Masukkan kode manual</h2>
-    <p class="lead">Masukkan kode manual jika QR Code pengiriman foto tidak dapat di-scan secara langsung.</p>
-    <div class="retrieve-form">
-      <input type="text" id="retrieveCodeInput" placeholder="tempel kode sambungan di sini">
-      <button class="btn btn-primary" id="retrieveGoBtn">Ambil</button>
-    </div>
-    <div id="retrieveResult" style="margin-top:18px;"></div>
-    <div class="status-msg" id="retrieveStatus"></div>
-    <div class="btn-row" style="margin-top: 20px;">
-      <button class="btn btn-ghost" id="backToFinalBtn">← Kembali ke Foto Terakhir</button>
-    </div>
-  </div>
-</div>
-
-<!-- RECEIVE VIA QR SCAN -->
-<div class="screen" id="screen-receive">
-  <div class="card" style="text-align:center;">
-    <h2>✿ Unduh Fotomu ✿</h2>
-    <p class="lead" id="receiveStatus">Menyambungkan ke photobooth…</p>
-    <div id="receiveResult" style="margin-top:15px;"></div>
-  </div>
-</div>
-
-<!-- REVIEW OVERLAY -->
-<div class="overlay" id="reviewOverlay">
-  <div class="review-card">
-    <h3 style="margin-bottom:12px;">Simpan foto ini?</h3>
-    <img id="reviewImg">
-    <div class="btn-row" style="margin-top:0;">
-      <button class="btn btn-ghost" id="retakeBtn">↻ Foto Ulang</button>
-      <button class="btn btn-primary" id="keepBtn">✓ Simpan</button>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 
@@ -522,7 +60,6 @@ function qrImageUrl(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
-/* PERBAIKAN BURAQ/PECAH: Naikkan resolusi maksimal & kualitas kompresi untuk database */
 function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -532,7 +69,7 @@ function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
       if (w > h) {
         if (w > maxSide) { h = Math.round((h * maxSide) / w); w = maxSide; }
       } else {
-        if (h > maxSide) { w = Math.round((w * maxSide) / h); h = maxSide; }
+        if (h > maxSide) { w = Math.round((h * maxSide) / h); h = maxSide; }
       }
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
@@ -541,6 +78,7 @@ function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
       ctx.drawImage(img, 0, 0, w, h);
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
+    img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   });
 }
@@ -566,7 +104,6 @@ const state = {
   isUpdatingFromLive: false
 };
 
-/* SINKRONISASI 2 ARAH (REAL-TIME STREAMING) */
 async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId || state.isUpdatingFromLive) return;
   try {
@@ -590,7 +127,6 @@ async function pushRealtimeSessionState(statusName) {
   }
 }
 
-/* KONEKSIKAN DUA-ARAH UNTUK CUSTOMER MAUPUN ADMIN */
 function listenCurrentSessionLive() {
   if (!window.fbDb || !state.sessionId) return;
   const { doc, onSnapshot } = window.fbFirestoreTools;
@@ -603,9 +139,6 @@ function listenCurrentSessionLive() {
 
     state.isUpdatingFromLive = true;
 
-    // Perangkat pemilik sesi (yang memotret) TETAP pakai foto asli resolusi tinggi di memori lokal.
-    // Snapshot dari Firestore hanya versi terkompresi (untuk sync/monitoring), jadi jangan menimpa
-    // foto asli di perangkat pemilik -- ini mencegah hasil unduh/cetak jadi buram.
     if (data.photos && data.photos.length > 0 && !state.isOwnerDevice) {
       state.photos = data.photos;
     }
@@ -717,16 +250,11 @@ function listenToActiveSessions() {
   });
 }
 
-/* AUTO-CLEAN: hapus otomatis data lama supaya tidak numpuk terus.
-   Sesi/foto yang baru selesai TETAP bisa dibuka & dipantau admin selama
-   CLEANUP_RETENTION_HOURS jam ke depan -- baru dihapus permanen setelahnya.
-   Ubah angka ini kalau mau retensinya lebih lama/pendek. */
 const CLEANUP_RETENTION_HOURS = 24;
 let lastAutoCleanAt = 0;
 
 async function runAutoCleanup(retentionHours = CLEANUP_RETENTION_HOURS){
   if (!window.fbDb) return;
-  // Jangan jalankan lebih dari sekali per 10 menit per tab, biar hemat baca/tulis Firestore.
   if (Date.now() - lastAutoCleanAt < 10 * 60 * 1000) return;
   lastAutoCleanAt = Date.now();
 
@@ -743,7 +271,7 @@ async function runAutoCleanup(retentionHours = CLEANUP_RETENTION_HOURS){
 
     if (deletions.length > 0) {
       await Promise.all(deletions);
-      console.log('Auto-clean: menghapus ' + deletions.length + ' data lama (>' + retentionHours + ' jam).');
+      console.log('Auto-clean: menghapus ' + deletions.length + ' data lama.');
     }
   }catch(err){
     console.error('Auto-clean gagal:', err);
@@ -785,12 +313,14 @@ function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
+
 function fullCleanup(){
   stopCamera();
   if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
   if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
   if(state.liveUnsubscribe){ state.liveUnsubscribe(); state.liveUnsubscribe = null; }
 }
+
 document.getElementById('homeBtn').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
 document.getElementById('brandClick').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
 
@@ -798,10 +328,12 @@ document.getElementById('brandClick').onclick = ()=>{ setMinimalMode(false); ful
 let chosenSource='builtin';
 document.getElementById('optBuiltin').onclick=()=>{ chosenSource='builtin'; highlightOpt('optBuiltin'); };
 document.getElementById('optPhone').onclick=()=>{ chosenSource='phone'; highlightOpt('optPhone'); };
+
 function highlightOpt(id){
   document.querySelectorAll('.start-option').forEach(o=>o.style.borderColor='var(--pink)');
   document.getElementById(id).style.borderColor='var(--pink-deep)';
 }
+
 document.querySelectorAll('.photo-count-btn').forEach(btn => {
   btn.onclick = (e) => {
     document.querySelectorAll('.photo-count-btn').forEach(b => b.classList.remove('active'));
@@ -809,6 +341,7 @@ document.querySelectorAll('.photo-count-btn').forEach(btn => {
     state.maxPhotos = parseInt(e.currentTarget.dataset.count);
   };
 });
+
 document.getElementById('startBtn').onclick=()=>{
   state.sessionId = 'SESI-' + Math.floor(1000 + Math.random() * 9000);
   state.isOwnerDevice = true;
@@ -829,6 +362,7 @@ function updateMirrorUI(){
   btn.classList.toggle('active', state.mirror);
   videoEl.classList.toggle('video-mirrored', state.mirror);
 }
+
 document.getElementById('mirrorToggleBtn').onclick=()=>{
   state.mirror = !state.mirror;
   updateMirrorUI();
@@ -855,10 +389,12 @@ function switchSource(src){
     startPhoneCameraPairing();
   }
 }
+
 function setCamStatus(msg, isError){
   const el=document.getElementById('camStatus');
   el.textContent=msg; el.classList.toggle('error', !!isError);
 }
+
 async function startBuiltinCamera(){
   setCamStatus('Menyiapkan kamera…');
   document.getElementById('shutterBtn').disabled=true;
@@ -874,6 +410,7 @@ async function startBuiltinCamera(){
     setCamStatus('Tidak bisa mengakses kamera. Pastikan izin kamera aktif.', true);
   }
 }
+
 function stopCamera(){
   if(state.stream){ state.stream.getTracks().forEach(t=>t.stop()); state.stream=null; }
 }
@@ -945,7 +482,6 @@ document.getElementById('shutterBtn').onclick = () => {
   }, 1000);
 };
 
-/* PERBAIKAN: Jepret Foto dengan Kualitas Maksimal (0.98 JPEG) */
 function takePhoto(w, h) {
   const canvas = document.createElement('canvas'); 
   canvas.width = w; canvas.height = h;
@@ -967,6 +503,7 @@ function takePhoto(w, h) {
   document.getElementById('reviewOverlay').classList.add('show');
   document.getElementById('shutterBtn').disabled = false;
 }
+
 document.getElementById('retakeBtn').onclick=()=>{ document.getElementById('reviewOverlay').classList.remove('show'); state.pendingShot=null; };
 document.getElementById('keepBtn').onclick=()=>{
   state.photos.push(state.pendingShot);
@@ -989,6 +526,7 @@ document.getElementById('keepBtn').onclick=()=>{
     setCamStatus((state.maxPhotos - state.photos.length)+' foto lagi ya!');
   }
 };
+
 function renderShotsRow(){
   const row=document.getElementById('shotsRow'); row.innerHTML='';
   for(let i=0; i<state.maxPhotos; i++){
@@ -1053,7 +591,7 @@ document.getElementById('manageFramesBtn').onclick=()=>{ buildManageFrameGallery
 document.getElementById('liveMonitorBtn').onclick = () => { 
   runAutoCleanup();
   listenToActiveSessions(); 
-  showScreen('screen-admin-monitor'); // <--- Menambahkan navigasi ke layar monitor admin
+  showScreen('screen-admin-monitor');
 };
 document.getElementById('backFromManageBtn').onclick=()=>{ showScreen('screen-start'); };
 document.getElementById('backFromMonitorBtn').onclick=()=>{ showScreen('screen-start'); };
@@ -1352,39 +890,32 @@ document.getElementById('resetZoomBtn').onclick = () => {
   }
 };
 
+/* PINDAH KE HALAMAN FINAL & BUKA AKSES TOMBOL */
 document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
   setupEditorWorkspace();
 
   try{
-    // 1. Render gambar di canvas
     await renderFinalCanvas();
-    
-    // 2. Langsung aktifkan tombol simpan, cetak, & kirim ke HP tanpa nunggu listener
     enableActionButtons();
     
-    // 3. Simpan ke riwayat lokal
     const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
     if(thumb) addToHistory(thumb);
 
-    // 4. Baru jalankan sinkronisasi background ke cloud
     pushRealtimeSessionState('Editor / Selesai');
     listenCurrentSessionLive();
   }catch(e){
-    // Tetap aktifkan tombol agar pengguna tetap bisa bertransaksi meski sync cloud error
     enableActionButtons();
-    console.error('Gagal menyiapkan hasil akhir:', e);
+    console.error('Error saat berpindah ke final screen:', e);
   }
 };
 
-/* PERBAIKAN: Render Canvas HD + Smooth Antialiasing */
-/* PERBAIKAN: Render Canvas HD Tanpa Penurunan Kualitas */
+/* RENDER CANVAS HD */
 function renderFinalCanvas(){
   return new Promise((resolve)=>{
     const canvas = document.getElementById('finalCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Tetapkan resolusi HD 1200 x 3000px
     const W = 1200, H = 3000, previewW = 220;
     const scaleFactor = W / previewW;
 
@@ -1412,6 +943,21 @@ function renderFinalCanvas(){
     let loaded = 0; 
     const total = placedPhotos.length;
 
+    const checkComplete = () => {
+      loaded++;
+      if (loaded >= total) {
+        if (!f.builtin && f.dataUrl) {
+          const overlay = new Image();
+          overlay.crossOrigin = "anonymous";
+          overlay.onload = () => { ctx.drawImage(overlay, 0, 0, W, H); resolve(); };
+          overlay.onerror = () => resolve();
+          overlay.src = f.dataUrl;
+        } else {
+          resolve();
+        }
+      }
+    };
+
     placedPhotos.forEach((item) => {
       const im = new Image();
       im.crossOrigin = "anonymous";
@@ -1438,23 +984,9 @@ function renderFinalCanvas(){
         }
 
         ctx.drawImage(im, sx, sy, sWidth, sHeight, renderX, renderY, renderW, renderH);
-
-        loaded++;
-        if(loaded === total){
-          if(!f.builtin && f.dataUrl){
-            const overlay = new Image();
-            overlay.crossOrigin = "anonymous";
-            overlay.onload = () => { 
-              ctx.drawImage(overlay, 0, 0, W, H); 
-              resolve(); 
-            };
-            overlay.src = f.dataUrl;
-          } else { 
-            resolve(); 
-          }
-        }
+        checkComplete();
       };
-      // Selalu prioritaskan foto asli resolusi tinggi dari memori jika ada
+      im.onerror = () => checkComplete();
       im.src = state.photos[item.photoIdx] || item.src || '';
     });
   });
@@ -1465,19 +997,29 @@ function safeDataUrl(){
   try{ return canvas.toDataURL('image/png', 1.0); } catch(e){ return null; }
 }
 
-/* PUSH FOTO HD KE SHARED_RESULTS */
+document.getElementById('downloadBtn').onclick=()=>{
+  const dataUrl=safeDataUrl(); if(!dataUrl) return;
+  const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
+};
+
+document.getElementById('printBtn').onclick = () => {
+  const canvas = document.getElementById('finalCanvas');
+  const printImg = document.getElementById('printImg');
+  if (!canvas || !printImg) return;
+  
+  printImg.src = canvas.toDataURL('image/png', 1.0);
+  setTimeout(() => { window.print(); }, 250);
+};
+
+/* UPLOAD FOTO HD KE FIRESTORE UNTUK SHARED RESULT */
 async function pushFinalImageToShare(){
   if(!window.fbDb || !state.sessionId) return false;
   
-  // Pastikan render ulang canvas dengan resolusi HD sebelum di-upload
   await renderFinalCanvas();
   const canvas = document.getElementById('finalCanvas');
   
   try{
-    // Menggunakan PNG Kualitas 1.0 agar tetap tajam dan jernih
     const rawDataUrl = canvas.toDataURL('image/png', 1.0);
-    
-    // Hanya kompresi sedikit ukuran dimensi (1600px) agar muat di Firestore tanpa pecah
     const HDImage = await compressBase64(rawDataUrl, 1600, 0.92);
 
     const { doc, setDoc } = window.fbFirestoreTools;
@@ -1495,7 +1037,6 @@ async function pushFinalImageToShare(){
   }
 }
 
-/* FETCH RESULT DI HP */
 function fetchSharedResult(code, onFound, onNotFound){
   if(!window.fbDb || !code){ onNotFound(); return; }
   
@@ -1516,7 +1057,6 @@ function fetchSharedResult(code, onFound, onNotFound){
     });
 }
 
-/* TAMPILKAN QR BOX & PAKSA TOMBOL AKTIF */
 function showSendCodeBox(){
   const codeBox = document.getElementById('codeBox');
   const qrWrap = document.getElementById('qrWrap');
@@ -1542,29 +1082,28 @@ function showSendCodeBox(){
   });
 }
 
-/* PERBAIKAN TOMBOL KE HALAMAN FINAL */
-document.getElementById('toFinalBtn').onclick = async ()=>{
-  showScreen('screen-final');
-  setupEditorWorkspace();
+document.getElementById('sendPhoneBtn').onclick = () => { showSendCodeBox(); };
+document.getElementById('sendRetryBtn').onclick = () => { showSendCodeBox(); };
 
-  try{
-    await renderFinalCanvas();
-    
-    // LANGSUNG aktifkan semua tombol tanpa syarat
-    enableActionButtons();
-    
-    const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
-    if(thumb) addToHistory(thumb);
+function renderReceivedImage(container, dataUrl){
+  container.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  img.style.cssText = 'width:100%; max-width:280px; border-radius:16px; box-shadow:var(--shadow); margin-bottom:14px;';
+  container.appendChild(img);
 
-    pushRealtimeSessionState('Editor / Selesai');
-    listenCurrentSessionLive();
-  }catch(e){
-    enableActionButtons(); // Tetap aktifkan tombol meski ada error background
-    console.error('Error saat berpindah ke final screen:', e);
-  }
-};
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'btn btn-primary';
+  dlBtn.textContent = '⬇ Simpan ke HP';
+  dlBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.download = 'petal-booth-' + Date.now() + '.jpg';
+    a.href = dataUrl;
+    a.click();
+  };
+  container.appendChild(dlBtn);
+}
 
-/* CEK PENERIMAAN FOTO DI HP */
 function startReceiveFlow(code){
   const statusEl = document.getElementById('receiveStatus');
   const resultEl = document.getElementById('receiveResult');
@@ -1596,26 +1135,8 @@ document.getElementById('retrieveGoBtn').onclick = () => {
     ()=>{ statusEl.textContent = 'Kode tidak ditemukan atau sudah kedaluwarsa.'; }
   );
 };
-document.getElementById('toFinalBtn').onclick = async ()=>{
-  showScreen('screen-final');
-  setupEditorWorkspace();
 
-  try{
-    await renderFinalCanvas();
-    
-    // Langsung buka akses tombol tanpa syarat
-    enableActionButtons();
-    
-    const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
-    if(thumb) addToHistory(thumb);
-
-    pushRealtimeSessionState('Editor / Selesai');
-    listenCurrentSessionLive();
-  }catch(e){
-    enableActionButtons();
-    console.error('Error saat berpindah ke final screen:', e);
-  }
-};
+document.getElementById('backToFinalBtn').onclick = () => { showScreen('screen-final'); };
 
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.selectedFrame=null; placedPhotos = [];
@@ -1626,9 +1147,11 @@ document.getElementById('newSessionBtn').onclick=()=>{
 function loadHistory(){
   try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){ return []; }
 }
+
 function saveHistory(){
   try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0,HISTORY_MAX))); }catch(e){}
 }
+
 function makeThumbnail(sourceCanvas, maxW){
   try{
     const scale=maxW/sourceCanvas.width;
@@ -1638,11 +1161,14 @@ function makeThumbnail(sourceCanvas, maxW){
     return tc.toDataURL('image/jpeg',0.85);
   }catch(e){ return null; }
 }
+
 function addToHistory(dataUrl){
   state.history.unshift({id:'h'+Date.now(), dataUrl, time:Date.now()});
   saveHistory(); renderHistoryAll();
 }
+
 function renderHistoryAll(){ renderHistoryFull(); }
+
 function renderHistoryFull(){
   const wrap=document.getElementById('historyListFull'); if(!wrap) return;
   wrap.innerHTML='';
@@ -1656,7 +1182,6 @@ function renderHistoryFull(){
 document.getElementById('historyNavBtn').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
 document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-start'); };
 
-/* MODE "JADI KAMERA HP" via ?camera=ID & MODE TERIMA VIA QR via ?send=CODE */
 let cameraModeHostId = null;
 let cameraModeState = { peer: null, stream: null, call: null };
 
@@ -1729,28 +1254,3 @@ state.history = loadHistory();
 handleUrlParams();
 setTimeout(() => { runAutoCleanup(); }, 3000);
 </script>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyDdzUi9J2Js-z_HV8F7ZUhdavDFVY_bSmE",
-    authDomain: "photobooth-5e183.firebaseapp.com",
-    projectId: "photobooth-5e183",
-    storageBucket: "photobooth-5e183.firebasestorage.app",
-    messagingSenderId: "1019097637387",
-    appId: "1:1019097637387:web:9358bbf539add509455d0e",
-    measurementId: "G-HCX9P41EFT"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  window.fbDb = db;
-  window.fbFirestoreTools = { collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDocs, query, where };
-
-  loadStoredFrames();
-</script>
-</body>
-</html>
