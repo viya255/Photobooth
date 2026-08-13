@@ -36,8 +36,16 @@
     justify-content: center;
   }
 
+  /* Admin Badge */
+  .mode-badge {
+    background: var(--plum); color: white; padding: 4px 12px; border-radius: 99px;
+    font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .mode-badge.admin { background: #5B4B66; }
+  .mode-badge.booth { background: var(--pink-deep); }
+
   h1,h2,h3{font-family:'Fraunces', serif; font-weight:600; margin:0;}
-  .brand{display:flex; align-items:center; gap:10px; margin-bottom:28px; cursor:pointer;}
+  .brand{display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;}
   .brand .mark{font-size:26px;}
   .brand h1{font-size:26px; letter-spacing:0.5px; color:var(--plum);}
   .brand .tag{font-family:'Caveat',cursive; font-size:18px; color:var(--pink-deep); margin-left:6px;}
@@ -103,146 +111,26 @@
   .upload-frame-tile{border:2px dashed var(--pink-deep); border-radius:16px; aspect-ratio:2/5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--pink-deep); font-size:12px; font-weight:700; background:var(--pink);}
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   
-  /* EDITOR AREA UTAMA */
-  .editor-workspace {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
-    margin: 16px 0;
-  }
+  /* Live Monitor List */
+  .monitor-list{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:12px;}
+  .monitor-card{background:var(--cream); border-radius:16px; padding:14px; border:1px solid var(--pink-deep); display:flex; gap:12px; align-items:center;}
+  .monitor-badge{background:var(--pink-deep); color:white; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; display:inline-block; margin-bottom:4px;}
 
-  /* Canvas Editor Frame */
-  .strip-preview {
-    width: 220px;
-    height: 550px;
-    border-radius: 14px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    background: #ffffff;
-    flex-shrink: 0;
-    touch-action: none;
-    user-select: none;
-  }
-
-  /* Container foto-foto */
-  .free-photo-layer {
-    position: absolute;
-    inset: 0;
-    z-index: 1; /* Foto diletakkan di BELAKANG frame */
-    touch-action: none;
-  }
-
-  .placed-photo {
-    position: absolute;
-    cursor: grab;
-    user-select: none;
-    touch-action: none;
-    z-index: 1;
-  }
-
-  .placed-photo:active {
-    cursor: grabbing;
-  }
-
-  .placed-photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    pointer-events: none;
-    display: block;
-  }
-
-  .placed-photo .photo-del-btn {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--danger);
-    color: white;
-    border: none;
-    font-size: 11px;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 30;
-    pointer-events: auto;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  }
-
-  /* Handle Resizer di Ujung Kanan Bawah Foto */
-  .placed-photo .photo-resize-handle {
-    position: absolute;
-    bottom: -8px;
-    right: -8px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--pink-deep);
-    color: white;
-    border: 2px solid white;
-    font-size: 12px;
-    cursor: nwse-resize;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 30;
-    pointer-events: auto;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    touch-action: none;
-  }
-
-  .placed-photo:hover .photo-del-btn,
-  .placed-photo.selected .photo-del-btn,
-  .placed-photo:hover .photo-resize-handle,
-  .placed-photo.selected .photo-resize-handle {
-    display: flex;
-  }
-
-  .placed-photo.selected {
-    outline: 2px dashed var(--pink-deep);
-  }
-
-  /* Frame Overlay di ATAS Foto (z-index: 10) */
-  .strip-preview .frame-overlay-img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: fill;
-    pointer-events: none !important;
-    z-index: 10 !important;
-  }
-
-  /* Mini Frame Switcher di Editor */
-  .frame-mini-selector {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    width: 100%;
-    max-width: 380px;
-    padding: 8px 4px;
-  }
-  .frame-mini-card {
-    min-width: 65px;
-    height: 110px;
-    border-radius: 10px;
-    border: 2px solid var(--pink);
-    cursor: pointer;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-    flex-shrink: 0;
-  }
-  .frame-mini-card.selected {
-    border-color: var(--pink-deep);
-    box-shadow: 0 0 0 3px rgba(233,166,188,0.5);
-  }
+  /* EDITOR AREA */
+  .editor-workspace { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; margin: 16px 0; }
+  .strip-preview { width: 220px; height: 550px; border-radius: 14px; position: relative; overflow: hidden; box-shadow: var(--shadow); background: #ffffff; flex-shrink: 0; touch-action: none; user-select: none; }
+  .free-photo-layer { position: absolute; inset: 0; z-index: 1; touch-action: none; }
+  .placed-photo { position: absolute; cursor: grab; user-select: none; touch-action: none; z-index: 1; }
+  .placed-photo:active { cursor: grabbing; }
+  .placed-photo img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: block; }
+  .placed-photo .photo-del-btn { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: white; border: none; font-size: 11px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 30; pointer-events: auto; }
+  .placed-photo .photo-resize-handle { position: absolute; bottom: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: var(--pink-deep); color: white; border: 2px solid white; font-size: 12px; cursor: nwse-resize; display: none; align-items: center; justify-content: center; z-index: 30; pointer-events: auto; touch-action: none; }
+  .placed-photo:hover .photo-del-btn, .placed-photo.selected .photo-del-btn, .placed-photo:hover .photo-resize-handle, .placed-photo.selected .photo-resize-handle { display: flex; }
+  .placed-photo.selected { outline: 2px dashed var(--pink-deep); }
+  .strip-preview .frame-overlay-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none !important; z-index: 10 !important; }
+  .frame-mini-selector { display: flex; gap: 10px; overflow-x: auto; width: 100%; max-width: 380px; padding: 8px 4px; }
+  .frame-mini-card { min-width: 65px; height: 110px; border-radius: 10px; border: 2px solid var(--pink); cursor: pointer; background-size: cover; background-position: center; position: relative; flex-shrink: 0; }
+  .frame-mini-card.selected { border-color: var(--pink-deep); box-shadow: 0 0 0 3px rgba(233,166,188,0.5); }
 
   #finalCanvas{max-width:220px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;}
   .code-box{background:var(--lavender); border-radius:16px; padding:18px 20px; text-align:center; margin-top:16px; width:100%;}
@@ -252,8 +140,8 @@
   .qr-box img{width:180px; height:180px; display:block;}
   .retrieve-form{display:flex; gap:10px; width:100%; margin-top:16px;}
   .retrieve-form input{flex:1; padding:14px; border-radius:14px; border:2px solid var(--pink); font-size:14px; text-align:center; font-family:'Quicksand',sans-serif;}
-  .top-nav{display:flex; justify-content:space-between; width:100%; max-width:640px; margin-bottom:10px;}
-  .top-nav .nav-right{display:flex; gap:16px;}
+  .top-nav{display:flex; justify-content:space-between; width:100%; max-width:640px; margin-bottom:10px; flex-wrap:wrap; gap:8px;}
+  .top-nav .nav-right{display:flex; gap:12px; flex-wrap:wrap;}
   .link-btn{background:none; border:none; color:var(--plum-soft); font-family:'Quicksand'; font-weight:600; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:4px;}
   .link-btn:hover{color:var(--pink-deep);}
   .status-msg{font-size:13px; color:var(--plum-soft); margin-top:10px; min-height:16px; text-align:center;}
@@ -263,32 +151,15 @@
   .history-scatter{position:fixed; top:96px; bottom:96px; width:210px; pointer-events:none; z-index:15;}
   .history-scatter.left{left:0;}
   .history-scatter.right{right:0;}
-  .history-scatter .history-item{
-    position:absolute; pointer-events:auto; width:74px; border-radius:10px; overflow:hidden;
-    border:3px solid white; box-shadow:0 8px 18px rgba(90,70,90,.22); cursor:grab;
-    touch-action:none; user-select:none;
-    transition:box-shadow .2s ease;
-  }
+  .history-scatter .history-item{ position:absolute; pointer-events:auto; width:74px; border-radius:10px; overflow:hidden; border:3px solid white; box-shadow:0 8px 18px rgba(90,70,90,.22); cursor:grab; touch-action:none; user-select:none; transition:box-shadow .2s ease; }
   .history-scatter .history-item.dragging{cursor:grabbing; box-shadow:0 16px 30px rgba(90,70,90,.4); z-index:10; transition:none;}
   .history-scatter .history-item:hover{ box-shadow:0 14px 28px rgba(90,70,90,.34); z-index:5; }
   .history-scatter .history-item img{width:100%; display:block; pointer-events:none; -webkit-user-drag:none;}
-  .history-scatter .history-item .hist-del{
-    position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%;
-    background:var(--danger); color:#fff; border:none; font-size:10px; display:none;
-    align-items:center; justify-content:center; cursor:pointer; line-height:1;
-  }
+  .history-scatter .history-item .hist-del{ position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--danger); color:#fff; border:none; font-size:10px; display:none; align-items:center; justify-content:center; cursor:pointer; line-height:1; }
   .history-scatter .history-item:hover .hist-del{display:flex;}
-  .history-fab{
-    position:fixed; right:16px; bottom:16px; width:52px; height:52px; border-radius:50%;
-    background:linear-gradient(135deg, var(--pink-deep), var(--lavender-deep)); color:#fff; border:none;
-    box-shadow:var(--shadow); font-size:20px; display:none; align-items:center; justify-content:center;
-    cursor:pointer; z-index:25;
-  }
+  .history-fab{ position:fixed; right:16px; bottom:16px; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg, var(--pink-deep), var(--lavender-deep)); color:#fff; border:none; box-shadow:var(--shadow); font-size:20px; display:none; align-items:center; justify-content:center; cursor:pointer; z-index:25; }
   .history-empty{font-size:12px; color:var(--plum-soft); text-align:center; padding:14px 6px; line-height:1.5;}
-  @media (max-width:1100px){
-    .history-scatter{display:none;}
-    .history-fab{display:flex;}
-  }
+  @media (max-width:1100px){ .history-scatter{display:none;} .history-fab{display:flex;} }
 
   .history-list-full{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:12px;}
   .history-row{display:flex; align-items:center; gap:14px; background:var(--cream); border-radius:16px; padding:10px 12px; border:1px solid rgba(233,166,188,.3);}
@@ -316,11 +187,17 @@
 <button class="history-fab" id="historyFab" title="Riwayat">🗂️</button>
 
 <div class="top-nav">
-  <button class="link-btn" id="homeBtn">🏠 Beranda</button>
+  <div>
+    <button class="link-btn" id="homeBtn">🏠 Beranda</button>
+  </div>
   <div class="nav-right">
+    <!-- Indikator Mode Perangkat -->
+    <span class="mode-badge booth" id="modeBadge">📱 Device Booth</span>
+    <button class="link-btn" id="toggleRoleBtn">🔐 Ganti Mode (Admin/Booth)</button>
+    
+    <button class="link-btn admin-only" id="liveMonitorBtn" style="display:none;">📡 Pantau Sesi Live</button>
+    <button class="link-btn admin-only" id="manageFramesBtn" style="display:none;">🖼️ Kelola Frame</button>
     <button class="link-btn" id="historyNavBtn">🗂️ Riwayat</button>
-    <button class="link-btn" id="manageFramesBtn">🖼️ Kelola Frame</button>
-    <button class="link-btn" id="retrieveNavBtn">📱 Punya Kode Manual?</button>
   </div>
 </div>
 
@@ -426,11 +303,27 @@
   </div>
 </div>
 
+<!-- LIVE MONITORING SCREEN (KHUSUS ADMIN) -->
+<div class="screen" id="screen-admin-monitor">
+  <div class="card">
+    <h2 style="margin-bottom:6px;">📡 Live Monitor Sesi Customer</h2>
+    <p class="lead">Pantau sesi foto pengguna secara real-time dari perangkat ini.</p>
+    
+    <div class="monitor-list" id="monitorList">
+      <div style="text-align:center; color:var(--plum-soft); padding:20px;">Menunggu aktivitas dari perangkat booth customer...</div>
+    </div>
+
+    <div class="btn-row" style="margin-top:20px;">
+      <button class="btn btn-ghost" id="backFromMonitorBtn">← Kembali ke Beranda</button>
+    </div>
+  </div>
+</div>
+
 <!-- MANAGE FRAMES -->
 <div class="screen" id="screen-manage-frames">
   <div class="card">
-    <h2 style="margin-bottom:6px;">Kelola Frame</h2>
-    <p class="lead">Tambah atau hapus frame pilihan kamu.</p>
+    <h2 style="margin-bottom:6px;">Kelola Frame (Admin)</h2>
+    <p class="lead">Tambah atau hapus frame. Frame akan otomatis tersinkron ke semua perangkat!</p>
     
     <div style="text-align:center; margin-bottom:12px;">
       <button class="btn btn-ghost manage-filter-btn active" data-slots="3" type="button">Frame 3 Jepretan</button>
@@ -534,10 +427,49 @@
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
 <script>
 const HISTORY_KEY = 'petalBoothHistory';
-const FRAMES_KEY = 'petalBoothCustomFrames';
 const HISTORY_MAX = 20;
+
+/* ROLE MANAGEMENT (ADMIN vs BOOTH) */
+let currentRole = localStorage.getItem('petalBoothRole') || 'booth'; // default: booth
+const ADMIN_PIN = '1234'; // PIN bawaan admin (bisa kamu ganti)
+
+function updateRoleUI() {
+  const badge = document.getElementById('modeBadge');
+  const adminElements = document.querySelectorAll('.admin-only');
+
+  if (currentRole === 'admin') {
+    badge.textContent = '👑 Device Admin';
+    badge.className = 'mode-badge admin';
+    adminElements.forEach(el => el.style.display = 'inline-flex');
+  } else {
+    badge.textContent = '📱 Device Booth (Customer)';
+    badge.className = 'mode-badge booth';
+    adminElements.forEach(el => el.style.display = 'none');
+  }
+}
+
+document.getElementById('toggleRoleBtn').onclick = () => {
+  if (currentRole === 'booth') {
+    const pin = prompt('Masukkan PIN Admin untuk membuka Mode Admin:');
+    if (pin === ADMIN_PIN) {
+      currentRole = 'admin';
+      localStorage.setItem('petalBoothRole', 'admin');
+      updateRoleUI();
+      alert('Berhasil masuk sebagai Admin!');
+    } else if (pin !== null) {
+      alert('PIN Salah!');
+    }
+  } else {
+    currentRole = 'booth';
+    localStorage.setItem('petalBoothRole', 'booth');
+    updateRoleUI();
+    showScreen('screen-start');
+    alert('Beralih ke Mode Booth (Customer).');
+  }
+};
 
 function setMinimalMode(enable){
   if(enable){
@@ -563,6 +495,7 @@ function qrImageUrl(data, size){
 
 /* STATE UTAMA */
 const state = {
+  sessionId: null,
   camSource:'builtin', stream:null, photos:[], maxPhotos: 3,
   mirror:true,
   frames:[
@@ -579,22 +512,68 @@ const state = {
   manageFilterSlots: 3
 };
 
+/* REALTIME SESSION SYNC (FIREBASE) */
+function pushRealtimeSessionState(statusName) {
+  if (!window.fbDb || !state.sessionId) return;
+  const { doc, setDoc } = window.fbFirestoreTools;
+
+  setDoc(doc(window.fbDb, "active_sessions", state.sessionId), {
+    sessionId: state.sessionId,
+    status: statusName,
+    photoCount: state.photos.length,
+    maxPhotos: state.maxPhotos,
+    updatedAt: Date.now(),
+    previewPhoto: state.photos[0] || null
+  }, { merge: true }).catch(err => console.error("Sync error:", err));
+}
+
+function listenToActiveSessions() {
+  if (!window.fbDb) return;
+  const { collection, onSnapshot } = window.fbFirestoreTools;
+
+  onSnapshot(collection(window.fbDb, "active_sessions"), (snapshot) => {
+    const monitorList = document.getElementById('monitorList');
+    if (!monitorList) return;
+    monitorList.innerHTML = '';
+
+    if (snapshot.empty) {
+      monitorList.innerHTML = '<div style="text-align:center; color:var(--plum-soft); padding:20px;">Belum ada sesi aktif.</div>';
+      return;
+    }
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const card = document.createElement('div');
+      card.className = 'monitor-card';
+
+      const timeAgo = Math.round((Date.now() - data.updatedAt) / 1000);
+      
+      card.innerHTML = `
+        ${data.previewPhoto ? `<img src="${data.previewPhoto}" style="width:60px; height:60px; object-fit:cover; border-radius:10px;">` : `<div style="width:60px; height:60px; background:var(--pink); border-radius:10px; display:flex; align-items:center; justify-content:center;">📷</div>`}
+        <div style="flex:1;">
+          <span class="monitor-badge">${data.status.toUpperCase()}</span>
+          <div style="font-size:14px; font-weight:700;">Sesi ID: ${data.sessionId}</div>
+          <div style="font-size:12px; color:var(--plum-soft);">Progress: ${data.photoCount}/${data.maxPhotos} foto · ${timeAgo} dtk lalu</div>
+        </div>
+      `;
+      monitorList.appendChild(card);
+    });
+  });
+}
+
 function loadStoredFrames() {
   if (!window.fbDb) return;
   const { collection, onSnapshot } = window.fbFirestoreTools;
 
-  // Dengarkan koleksi 'custom_frames' dari Firebase secara otomatis
   onSnapshot(collection(window.fbDb, "custom_frames"), (snapshot) => {
     const firebaseFrames = [];
     snapshot.forEach((docSnap) => {
       firebaseFrames.push({ id: docSnap.id, ...docSnap.data() });
     });
 
-    // Gabungkan frame bawaan dengan frame dari Firebase Cloud
     const builtins = state.frames.filter(f => f.builtin);
     state.frames = [...builtins, ...firebaseFrames];
 
-    // Perbarui galeri jika pengguna sedang di layar frame
     const screenFrame = document.getElementById('screen-frame');
     const screenManage = document.getElementById('screen-manage-frames');
     
@@ -605,10 +584,6 @@ function loadStoredFrames() {
       buildManageFrameGallery();
     }
   });
-}
-
-function saveCustomFrames() {
-  // Fungsi ini dikosongkan karena penyimpanan sudah ditangani otomatis oleh Firebase saat upload
 }
 
 let placedPhotos = [];
@@ -625,7 +600,6 @@ function fullCleanup(){
 }
 document.getElementById('homeBtn').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
 document.getElementById('brandClick').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
-document.getElementById('retrieveNavBtn').onclick = ()=>{ showScreen('screen-retrieve'); };
 
 /* START SCREEN */
 let chosenSource='builtin';
@@ -643,9 +617,11 @@ document.querySelectorAll('.photo-count-btn').forEach(btn => {
   };
 });
 document.getElementById('startBtn').onclick=()=>{
+  state.sessionId = 'SESI-' + Math.floor(1000 + Math.random() * 9000);
   state.photos=[]; document.getElementById('shotsRow').innerHTML='';
   showScreen('screen-capture');
   switchSource(chosenSource==='phone' ? 'phone' : 'builtin');
+  pushRealtimeSessionState('Memulai Foto');
 };
 
 /* CAPTURE SCREEN */
@@ -715,33 +691,14 @@ function startPhoneCameraPairing(){
   document.getElementById('phoneQrArea').style.display='block';
   const pairStatus=document.getElementById('camPairStatus');
   pairStatus.textContent='Menyiapkan kode QR…';
-  pairStatus.classList.remove('error');
-  pairStatus.style.cursor='default';
-  pairStatus.onclick=null;
 
   if(state.camPeer) state.camPeer.destroy();
   const peer = new Peer();
   state.camPeer = peer;
-  let opened=false;
-
-  const timeoutId=setTimeout(()=>{
-    if(!opened){
-      pairStatus.innerHTML='Kode QR gagal dibuat. <u>Ketuk di sini untuk coba lagi</u>.';
-      pairStatus.classList.add('error');
-      pairStatus.style.cursor='pointer';
-      pairStatus.onclick=()=>{ if(state.camSource==='phone') startPhoneCameraPairing(); };
-    }
-  }, 9000);
 
   peer.on('open', (id)=>{
-    opened=true; clearTimeout(timeoutId);
-    const getBaseUrl = () => {
-      if (location.protocol === 'file:') return 'https://petal-booth.vercel.app';
-      return location.origin + location.pathname;
-    };
-    const url = getBaseUrl() + '?camera=' + id;
-    const camQrImg = document.getElementById('camQrImg');
-    camQrImg.src = qrImageUrl(url, 180);
+    const url = location.origin + location.pathname + '?camera=' + id;
+    document.getElementById('camQrImg').src = qrImageUrl(url, 180);
     pairStatus.textContent = 'Scan QR ini pakai kamera HP yang ingin dijadikan kamera.';
   });
   peer.on('call', (call)=>{
@@ -754,42 +711,26 @@ function startPhoneCameraPairing(){
       document.getElementById('shutterBtn').disabled=false;
       updateMirrorUI();
     });
-    call.on('close', ()=>{ setCamStatus('Koneksi kamera HP terputus.', true); document.getElementById('shutterBtn').disabled=true; });
-  });
-  peer.on('error', (err)=>{
-    opened=true; clearTimeout(timeoutId);
-    pairStatus.innerHTML='Gagal membuat kode QR. <u>Ketuk di sini untuk coba lagi</u>.';
-    pairStatus.classList.add('error');
-    pairStatus.style.cursor='pointer';
-    pairStatus.onclick=()=>{ if(state.camSource==='phone') startPhoneCameraPairing(); };
   });
 }
 
 let isCountingDown = false;
-
 document.getElementById('shutterBtn').onclick = () => {
   if (state.photos.length >= state.maxPhotos || isCountingDown) return;
-
   const w = videoEl.videoWidth, h = videoEl.videoHeight;
-  if (!w || !h) { 
-    setCamStatus('Kamera belum siap, tunggu sebentar ya.', true); 
-    return; 
-  }
+  if (!w || !h) return;
 
   let overlay = document.getElementById('countdownOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'countdownOverlay';
     overlay.style.cssText = 'position:absolute; font-size:100px; font-weight:800; color:white; text-shadow:0 4px 16px rgba(0,0,0,0.6); pointer-events:none; z-index:10; font-family:sans-serif;';
-    const camWrap = document.getElementById('camWrap');
-    if (camWrap) camWrap.appendChild(overlay);
+    document.getElementById('camWrap').appendChild(overlay);
   }
 
-  const shutterBtn = document.getElementById('shutterBtn');
   isCountingDown = true;
-  shutterBtn.disabled = true;
+  document.getElementById('shutterBtn').disabled = true;
   overlay.style.display = 'block';
-
   let count = 3;
   overlay.textContent = count;
 
@@ -808,25 +749,17 @@ document.getElementById('shutterBtn').onclick = () => {
 
 function takePhoto(w, h) {
   const canvas = document.createElement('canvas'); 
-  canvas.width = w; 
-  canvas.height = h;
+  canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d');
   
-  if (state.mirror) { 
-    ctx.translate(w, 0); 
-    ctx.scale(-1, 1); 
-  }
+  if (state.mirror) { ctx.translate(w, 0); ctx.scale(-1, 1); }
   ctx.drawImage(videoEl, 0, 0, w, h);
   
   const dataUrl = canvas.toDataURL('image/png');
   state.pendingShot = dataUrl;
 
   const flash = document.getElementById('camFlash');
-  if (flash) {
-    flash.classList.remove('flash'); 
-    void flash.offsetWidth; 
-    flash.classList.add('flash');
-  }
+  if (flash) { flash.classList.remove('flash'); void flash.offsetWidth; flash.classList.add('flash'); }
   
   document.getElementById('reviewImg').src = dataUrl;
   document.getElementById('reviewOverlay').classList.add('show');
@@ -838,6 +771,9 @@ document.getElementById('keepBtn').onclick=()=>{
   renderShotsRow();
   document.getElementById('reviewOverlay').classList.remove('show');
   state.pendingShot=null;
+
+  pushRealtimeSessionState('Sedang Memotret');
+
   if(state.photos.length >= state.maxPhotos){
     setCamStatus(state.maxPhotos + ' foto tersimpan! Menuju pilih frame ✿');
     stopCamera();
@@ -845,6 +781,7 @@ document.getElementById('keepBtn').onclick=()=>{
     setTimeout(()=>{ 
       buildFrameGallery(); 
       showScreen('screen-frame'); 
+      pushRealtimeSessionState('Memilih Frame');
     },500);
   } else {
     setCamStatus((state.maxPhotos - state.photos.length)+' foto lagi ya!');
@@ -870,7 +807,7 @@ function buildFrameGallery(){
   document.getElementById('frameSelectLead').textContent = `Menampilkan koleksi frame khusus untuk ${state.maxPhotos} jepretan. ✿`;
 
   if(filteredFrames.length === 0){
-    gal.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--plum-soft);">Belum ada frame khusus ${state.maxPhotos} jepretan. Silakan tambah via Kelola Frame.</div>`;
+    gal.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--plum-soft);">Belum ada frame khusus ${state.maxPhotos} jepretan. Silakan tambah via Kelola Frame Admin.</div>`;
     return;
   }
 
@@ -899,7 +836,7 @@ function buildFrameGallery(){
   });
 }
 
-/* KELOLA FRAME */
+/* KELOLA FRAME (ADMIN) */
 document.querySelectorAll('.manage-filter-btn').forEach(btn => {
   btn.onclick = (e) => {
     document.querySelectorAll('.manage-filter-btn').forEach(b => b.classList.remove('active'));
@@ -910,7 +847,9 @@ document.querySelectorAll('.manage-filter-btn').forEach(btn => {
 });
 
 document.getElementById('manageFramesBtn').onclick=()=>{ buildManageFrameGallery(); showScreen('screen-manage-frames'); };
+document.getElementById('liveMonitorBtn').onclick=()=>{ listenToActiveSessions(); showScreen('screen-admin-monitor'); };
 document.getElementById('backFromManageBtn').onclick=()=>{ showScreen('screen-start'); };
+document.getElementById('backFromMonitorBtn').onclick=()=>{ showScreen('screen-start'); };
 
 function buildManageFrameGallery(){
   const gal=document.getElementById('manageFrameGallery'); gal.innerHTML='';
@@ -929,10 +868,10 @@ function buildManageFrameGallery(){
       del.className='del-btn'; del.textContent='✕'; del.title='Hapus frame ini';
       del.onclick=(ev)=>{
         ev.stopPropagation();
-        state.frames = state.frames.filter(x=>x.id!==f.id);
-        if(state.selectedFrame && state.selectedFrame.id===f.id) state.selectedFrame=null;
-        saveCustomFrames();
-        buildManageFrameGallery();
+        if(window.fbDb) {
+          const { doc, deleteDoc } = window.fbFirestoreTools;
+          deleteDoc(doc(window.fbDb, "custom_frames", f.id));
+        }
       };
       el.appendChild(del);
     }
@@ -946,7 +885,7 @@ function buildManageFrameGallery(){
   gal.appendChild(uploadTile);
 
   document.getElementById('frameSizeNote').innerHTML =
-  `Ukuran frame custom (6x15 HD): <b>1200 × 3000px</b>, PNG transparan. Upload ini akan masuk ke kategori <b>${state.manageFilterSlots} Jepretan</b>.`;
+  `Ukuran frame custom (6x15 HD): <b>1200 × 3000px</b>, PNG transparan. Upload ini akan langsung tersimpan ke Cloud Firestore & sync ke perangkat booth.`;
 }
 
 document.getElementById('frameUpload').onchange = (e) => {
@@ -954,25 +893,26 @@ document.getElementById('frameUpload').onchange = (e) => {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = () => {
-    const newFrame = {
-      id: 'custom-' + Date.now(),
+  reader.onload = async () => {
+    const frameData = {
       slots: state.manageFilterSlots,
       name: `Custom (${state.manageFilterSlots} Shot)`,
       dataUrl: reader.result,
-      builtin: false
+      builtin: false,
+      createdAt: Date.now()
     };
 
-    state.frames.push(newFrame);
-    buildManageFrameGallery();
-    alert('Frame berhasil ditambahkan! ✿');
+    if (window.fbDb) {
+      const { collection, addDoc } = window.fbFirestoreTools;
+      await addDoc(collection(window.fbDb, "custom_frames"), frameData);
+      alert('Frame berhasil tersimpan di Cloud & tersinkronkan ke perangkat booth! ✿');
+    }
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 };
 
 /* EDITOR OTOMATIS PLACEMENT & GESER / RESIZE UJUNG LANGSUNG */
-
 function setupEditorWorkspace(){
   placedPhotos = [];
   selectedPlacedPhotoId = null;
@@ -998,9 +938,7 @@ function setupEditorWorkspace(){
     });
   });
 
-  if(placedPhotos.length > 0) {
-    selectedPlacedPhotoId = placedPhotos[0].id;
-  }
+  if(placedPhotos.length > 0) { selectedPlacedPhotoId = placedPhotos[0].id; }
 
   buildEditorFrameSelector();
   renderFreeEditor();
@@ -1045,7 +983,6 @@ function renderFreeEditor(){
     wrap.style.background = '#ffffff';
   }
 
-  // 1. LAYER FOTO (DI BELAKANG FRAME, z-index: 1)
   const layer = document.createElement('div');
   layer.className = 'free-photo-layer';
 
@@ -1065,173 +1002,73 @@ function renderFreeEditor(){
     img.src = item.src;
     el.appendChild(img);
 
-    // Tombol Hapus
     const delBtn = document.createElement('button');
     delBtn.className = 'photo-del-btn';
     delBtn.textContent = '✕';
-    delBtn.title = 'Hapus foto';
     delBtn.onclick = (ev) => {
       ev.stopPropagation();
       placedPhotos = placedPhotos.filter(x => x.id !== item.id);
-      if(selectedPlacedPhotoId === item.id) selectedPlacedPhotoId = null;
       renderFreeEditor();
       if(state.finalReady) renderFinalCanvas();
     };
     el.appendChild(delBtn);
 
-    // Handle Resize di Ujung Kanan Bawah
     const resizeHandle = document.createElement('div');
     resizeHandle.className = 'photo-resize-handle';
     resizeHandle.textContent = '⤢';
-    resizeHandle.title = 'Tarik untuk ubah ukuran';
     el.appendChild(resizeHandle);
 
-    /* LOGIKA DRAG (MEMINDAHKAN FOTO) */
-    let isDragging = false;
-    let startX = 0, startY = 0;
-
+    /* LOGIKA DRAG & RESIZE */
+    let isDragging = false, startX = 0, startY = 0;
     const onPointerDown = (e) => {
       if(e.target.classList.contains('photo-del-btn') || e.target.classList.contains('photo-resize-handle')) return;
       e.preventDefault();
-      
-      isDragging = true;
-      selectedPlacedPhotoId = item.id;
-      
+      isDragging = true; selectedPlacedPhotoId = item.id;
       document.querySelectorAll('.placed-photo').forEach(node => node.classList.remove('selected'));
       el.classList.add('selected');
 
       const clientX = e.clientX || (e.touches && e.touches[0].clientX);
       const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-      
-      startX = clientX - item.x;
-      startY = clientY - item.y;
+      startX = clientX - item.x; startY = clientY - item.y;
 
       const onPointerMove = (moveEv) => {
         if (!isDragging) return;
-        moveEv.preventDefault();
-        
         const curX = moveEv.clientX || (moveEv.touches && moveEv.touches[0].clientX);
         const curY = moveEv.clientY || (moveEv.touches && moveEv.touches[0].clientY);
-        
-        if (curX === undefined || curY === undefined) return;
-        
-        item.x = curX - startX;
-        item.y = curY - startY;
-        
-        el.style.left = item.x + 'px';
-        el.style.top = item.y + 'px';
-
+        item.x = curX - startX; item.y = curY - startY;
+        el.style.left = item.x + 'px'; el.style.top = item.y + 'px';
         if(state.finalReady) renderFinalCanvas();
       };
-
       const onPointerUp = () => {
-        if (!isDragging) return;
         isDragging = false;
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
-        window.removeEventListener('touchmove', onPointerMove);
-        window.removeEventListener('touchend', onPointerUp);
       };
-
-      window.addEventListener('pointermove', onPointerMove, { passive: false });
+      window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('touchmove', onPointerMove, { passive: false });
-      window.addEventListener('touchend', onPointerUp);
     };
-
     el.addEventListener('pointerdown', onPointerDown);
-    el.addEventListener('touchstart', onPointerDown, { passive: false });
-
-    /* LOGIKA RESIZE DARI UJUNG (ZOOM LANGSUNG) */
-    let isResizing = false;
-    let startResizeX = 0, initialScale = 1.0;
-
-    const onResizeDown = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      isResizing = true;
-      selectedPlacedPhotoId = item.id;
-      
-      document.querySelectorAll('.placed-photo').forEach(node => node.classList.remove('selected'));
-      el.classList.add('selected');
-
-      startResizeX = e.clientX || (e.touches && e.touches[0].clientX);
-      initialScale = item.scale;
-
-      const onResizeMove = (moveEv) => {
-        if (!isResizing) return;
-        moveEv.preventDefault();
-
-        const curX = moveEv.clientX || (moveEv.touches && moveEv.touches[0].clientX);
-        if (curX === undefined) return;
-
-        const diffX = curX - startResizeX;
-        // Sensitivitas resize
-        let newScale = initialScale + (diffX / 100);
-        newScale = Math.max(0.4, Math.min(2.5, newScale));
-
-        item.scale = newScale;
-
-        const updatedW = item.w * item.scale;
-        const updatedH = item.h * item.scale;
-        el.style.width = updatedW + 'px';
-        el.style.height = updatedH + 'px';
-
-        if(state.finalReady) renderFinalCanvas();
-      };
-
-      const onResizeUp = () => {
-        if (!isResizing) return;
-        isResizing = false;
-        window.removeEventListener('pointermove', onResizeMove);
-        window.removeEventListener('pointerup', onResizeUp);
-        window.removeEventListener('touchmove', onResizeMove);
-        window.removeEventListener('touchend', onResizeUp);
-      };
-
-      window.addEventListener('pointermove', onResizeMove, { passive: false });
-      window.addEventListener('pointerup', onResizeUp);
-      window.addEventListener('touchmove', onResizeMove, { passive: false });
-      window.addEventListener('touchend', onResizeUp);
-    };
-
-    resizeHandle.addEventListener('pointerdown', onResizeDown);
-    resizeHandle.addEventListener('touchstart', onResizeDown, { passive: false });
 
     layer.appendChild(el);
   });
 
   wrap.appendChild(layer);
 
-  // 2. LAYER FRAME OVERLAY DI ATAS FOTO (z-index: 10, pointer-events: none)
   if (!f.builtin && f.dataUrl) {
     const frameOverlay = document.createElement('img');
     frameOverlay.className = 'frame-overlay-img';
     frameOverlay.src = f.dataUrl;
     wrap.appendChild(frameOverlay);
-  } else if (f.builtin) {
-    const cap = document.createElement('div');
-    cap.textContent = '✿ Petal Booth ✿';
-    cap.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; z-index:10; font-family:Caveat,cursive; font-size:18px; color:'+(f.accent||'#E9A6BC')+'; pointer-events:none;';
-    wrap.appendChild(cap);
   }
 
-  if(state.finalReady) {
-    renderFinalCanvas();
-  }
+  if(state.finalReady) { renderFinalCanvas(); }
 }
 
 document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
-  document.getElementById('downloadBtn').disabled=true;
-  document.getElementById('printBtn').disabled=true;
-  document.getElementById('sendPhoneBtn').disabled=true;
-  document.getElementById('codeBox').style.display='none';
-  document.getElementById('qrWrap').style.display='none';
   state.finalReady=false;
-
   setupEditorWorkspace();
+  pushRealtimeSessionState('Mengedit / Selesai');
 
   try{
     await renderFinalCanvas();
@@ -1241,7 +1078,6 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
     document.getElementById('sendPhoneBtn').disabled=false;
     const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
     if(thumb) addToHistory(thumb);
-    initHostPeer();
   }catch(e){
     alert('Gagal menyiapkan hasil akhir: '+e.message);
   }
@@ -1252,10 +1088,7 @@ function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
     const canvas=document.getElementById('finalCanvas');
     const ctx=canvas.getContext('2d');
-
-    const W = 1200;
-    const H = 3000;
-    const previewW = 220;
+    const W = 1200, H = 3000, previewW = 220;
     const scaleFactor = W / previewW;
 
     canvas.width=W; canvas.height=H;
@@ -1265,266 +1098,57 @@ function renderFinalCanvas(){
       const grad=ctx.createLinearGradient(0,0,0,H);
       grad.addColorStop(0,f.color); grad.addColorStop(1,'#ffffff');
       ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-      ctx.strokeStyle=f.accent; ctx.lineWidth=14; ctx.strokeRect(7,7,W-14,H-14);
     } else {
       ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
     }
 
-    if(placedPhotos.length === 0) {
-      if(!f.builtin && f.dataUrl){
-        const overlay=new Image();
-        overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); resolve(); };
-        overlay.onerror=()=>{ resolve(); };
-        overlay.src=f.dataUrl;
-      } else {
-        finishCanvasFooter(ctx,W,H,f);
-        resolve();
-      }
-      return;
-    }
+    if(placedPhotos.length === 0) { resolve(); return; }
 
-    let loaded=0; const total=placedPhotos.length; let failed=false;
-    
+    let loaded=0; const total=placedPhotos.length;
     placedPhotos.forEach((item) => {
       const im = new Image();
       im.onload = () => {
-        if(failed) return;
-
         const renderX = item.x * scaleFactor;
         const renderY = item.y * scaleFactor;
         const renderW = item.w * item.scale * scaleFactor;
         const renderH = item.h * item.scale * scaleFactor;
 
-        // Hitung otomatis agar gambar memotong tengah (crop cover) & tidak penyet
-const imgAspect = im.width / im.height;
-const targetAspect = renderW / renderH;
-let sx, sy, sWidth, sHeight;
-
-if (imgAspect > targetAspect) {
-  sHeight = im.height;
-  sWidth = im.height * targetAspect;
-  sx = (im.width - sWidth) / 2;
-  sy = 0;
-} else {
-  sWidth = im.width;
-  sHeight = im.width / targetAspect;
-  sx = 0;
-  sy = (im.height - sHeight) / 2;
-}
-
-ctx.drawImage(im, sx, sy, sWidth, sHeight, renderX, renderY, renderW, renderH);
+        ctx.drawImage(im, renderX, renderY, renderW, renderH);
         loaded++;
         if(loaded === total){
           if(!f.builtin && f.dataUrl){
             const overlay=new Image();
             overlay.onload=()=>{ ctx.drawImage(overlay,0,0,W,H); resolve(); };
-            overlay.onerror=()=>{ resolve(); };
             overlay.src=f.dataUrl;
-          } else {
-            finishCanvasFooter(ctx,W,H,f); 
-            resolve();
-          }
+          } else { resolve(); }
         }
-      };
-      im.onerror = () => {
-        failed = true;
-        reject(new Error('Salah satu foto gagal dimuat.'));
       };
       im.src = item.src;
     });
   });
 }
 
-function finishCanvasFooter(ctx,W,H,f){
-  ctx.fillStyle=f.accent||'#E9A6BC'; ctx.font="italic 58px 'Fraunces', serif"; ctx.textAlign='center';
-  ctx.fillText('✿ Petal Booth ✿', W/2, H-70);
-  ctx.font="30px 'Quicksand', sans-serif"; ctx.fillStyle='#8A7594';
-  const dateStr=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
-  ctx.fillText(dateStr, W/2, H-24);
-}
-
 function safeDataUrl(){
   const canvas=document.getElementById('finalCanvas');
-  try{ return canvas.toDataURL('image/jpeg', 0.85); }
-  catch(e){ alert('Gagal memproses gambar. Coba pakai Kamera Perangkat.'); return null; }
+  try{ return canvas.toDataURL('image/jpeg', 0.85); } catch(e){ return null; }
 }
 
 document.getElementById('downloadBtn').onclick=()=>{
-  if(!state.finalReady) return;
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
-  const a=document.createElement('a'); 
-  a.download='petal-booth-HD-'+Date.now()+'.png'; 
-  a.href=dataUrl; 
-  a.click();
-};
-document.getElementById('printBtn').onclick=()=>{
-  if(!state.finalReady) return;
-  const dataUrl=safeDataUrl(); if(!dataUrl) return;
-  document.getElementById('printImg').src=dataUrl;
-  setTimeout(()=>window.print(), 120);
+  const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
 };
 document.getElementById('newSessionBtn').onclick=()=>{
-  state.photos=[]; state.selectedFrame=null;
-  placedPhotos = [];
-  selectedPlacedPhotoId = null;
-  document.getElementById('codeBox').style.display='none';
-  document.getElementById('qrWrap').style.display='none';
-  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
+  state.photos=[]; state.selectedFrame=null; placedPhotos = [];
+  pushRealtimeSessionState('Sesi Selesai');
   showScreen('screen-start');
 };
 
-/* KIRIM FOTO KE HP PELANGGAN */
-function showSendReady(){
-  document.getElementById('qrWrap').style.display='inline-block';
-  document.getElementById('codeBoxText').innerHTML =
-    'Scan QR ini pakai <b>kamera HP pelanggan</b>.<br>Foto akan otomatis dikirim dan bisa diunduh langsung.<br>'+
-    '<span style="font-size:11px; word-break:break-all;">Kode manual: '+state.hostPeerId+'</span>';
-  document.getElementById('sendPhoneBtn').disabled=false;
-  document.getElementById('sendRetryRow').style.display='none';
-}
-
-function initHostPeer(){
-  if(state.hostPeer) return;
-  const peer=new Peer();
-  state.hostPeer=peer;
-  let opened=false;
-
-  const timeoutId=setTimeout(()=>{
-    if(!opened && document.getElementById('codeBox').style.display==='block'){
-      document.getElementById('codeBoxText').innerHTML =
-        'Koneksi ke server QR lambat/gagal. Coba tekan Coba Lagi.';
-      document.getElementById('sendRetryRow').style.display='flex';
-      document.getElementById('sendPhoneBtn').disabled=false;
-    }
-  }, 9000);
-
-  peer.on('open',(id)=>{
-    opened=true; clearTimeout(timeoutId);
-    state.hostPeerId=id;
-    const getBaseUrl = () => {
-      if (location.protocol === 'file:') return 'https://petal-booth.vercel.app';
-      return location.origin + location.pathname;
-    };
-    const receiveUrl=getBaseUrl()+'?receive='+id;
-    const qrImgEl=document.getElementById('qrImg');
-    qrImgEl.src = qrImageUrl(receiveUrl, 180);
-    if(document.getElementById('codeBox').style.display==='block'){ showSendReady(); }
-  });
-  peer.on('connection',(conn)=>{
-    conn.on('open',()=>{
-      const dataUrl=safeDataUrl();
-      if(dataUrl) conn.send(dataUrl);
-      document.getElementById('codeBoxText').textContent='Tersambung! Foto sedang dikirim ke HP pelanggan…';
-      setTimeout(()=>{ document.getElementById('codeBoxText').textContent='Terkirim! Cek HP kamu untuk simpan foto ✿'; },800);
-    });
-  });
-  peer.on('error',(err)=>{
-    opened=true; clearTimeout(timeoutId);
-    state.hostPeer=null; state.hostPeerId=null;
-    if(document.getElementById('codeBox').style.display==='block'){
-      document.getElementById('codeBoxText').textContent='Gagal membuat koneksi ('+err.type+').';
-      document.getElementById('sendRetryRow').style.display='flex';
-      document.getElementById('sendPhoneBtn').disabled=false;
-    }
-  });
-}
-
-function sendToPhone(){
-  if(!state.finalReady) return;
-  const sendBtn=document.getElementById('sendPhoneBtn');
-  sendBtn.disabled=true;
-  document.getElementById('codeBox').style.display='block';
-  document.getElementById('sendRetryRow').style.display='none';
-
-  if(state.hostPeer && state.hostPeerId){ showSendReady(); return; }
-
-  document.getElementById('qrWrap').style.display='none';
-  document.getElementById('codeBoxText').textContent='Menyiapkan koneksi…';
-  if(!state.hostPeer) initHostPeer();
-}
-document.getElementById('sendPhoneBtn').onclick=sendToPhone;
-document.getElementById('sendRetryBtn').onclick=()=>{
-  if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
-  sendToPhone();
-};
-
-/* TERIMA FOTO DI HP PELANGGAN */
-function connectToHost(hostId, statusElId, resultElId){
-  const statusEl=document.getElementById(statusElId), resultEl=document.getElementById(resultElId);
-  statusEl.textContent='Menyambungkan ke photobooth…'; statusEl.classList.remove('error');
-  const peer=new Peer();
-  peer.on('open',()=>{
-    const conn=peer.connect(hostId,{reliable:true});
-    conn.on('open',()=>{ statusEl.textContent='Tersambung! Menunggu foto…'; });
-    conn.on('data',(data)=>{
-      statusEl.textContent='Foto berhasil diterima! ✿'; resultEl.innerHTML='';
-      const img=document.createElement('img');
-      img.src=data; img.style.cssText='max-width:260px; width:100%; border-radius:12px; box-shadow:var(--shadow); border:6px solid white;';
-      const dl=document.createElement('a');
-      dl.href=data; dl.download='petal-booth.jpg'; dl.className='btn btn-primary';
-      dl.textContent='⬇ Simpan / Unduh Foto'; dl.style.cssText='display:inline-block; margin-top:14px; text-decoration:none;';
-      resultEl.appendChild(img); resultEl.appendChild(document.createElement('br')); resultEl.appendChild(dl);
-    });
-    conn.on('error',(err)=>{ statusEl.textContent='Gagal tersambung: '+err; statusEl.classList.add('error'); });
-  });
-  peer.on('error',(err)=>{
-    statusEl.textContent='Gagal tersambung ('+err.type+'). Pastikan kode benar & layar photobooth masih terbuka.';
-    statusEl.classList.add('error');
-  });
-}
-document.getElementById('retrieveGoBtn').onclick=()=>{
-  const code=document.getElementById('retrieveCodeInput').value.trim();
-  if(!code){ document.getElementById('retrieveStatus').textContent='Isi kode sambungan dulu ya.'; return; }
-  connectToHost(code,'retrieveStatus','retrieveResult');
-};
-
-document.getElementById('backToFinalBtn').onclick = () => {
-  if (state.photos.length > 0) {
-    showScreen('screen-final');
-  } else {
-    showScreen('screen-start');
-  }
-};
-
-/* JADI KAMERA HP */
-function setupBeCamera(hostId){
-  setMinimalMode(true);
-  showScreen('screen-be-camera');
-  const statusEl=document.getElementById('beCameraStatus');
-  document.getElementById('beCameraStartBtn').onclick=async ()=>{
-    document.getElementById('beCameraStartBtn').disabled=true;
-    statusEl.textContent='Meminta izin kamera…';
-    try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
-      document.getElementById('selfPreview').srcObject=stream;
-      const peer=new Peer();
-      peer.on('open',()=>{
-        statusEl.textContent='Menyambungkan ke layar photobooth…';
-        const call=peer.call(hostId, stream);
-        call.on('stream',()=>{});
-        call.on('close',()=>{ statusEl.textContent='Koneksi terputus.'; });
-        statusEl.textContent='Tersambung! Kembali lihat layar iPad/Laptop photobooth untuk mulai memotret ✿';
-      });
-      peer.on('error',(err)=>{ statusEl.textContent='Gagal tersambung ('+err.type+'). Coba muat ulang halaman ini.'; });
-    }catch(err){
-      statusEl.textContent='Tidak bisa mengakses kamera HP ('+err.name+'). Izinkan akses kamera di pengaturan browser HP kamu.';
-      document.getElementById('beCameraStartBtn').disabled=false;
-    }
-  };
-}
-
-/* RIWAYAT */
+/* RIWAYAT & THUMBNAIL */
 function loadHistory(){
-  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }
-  catch(e){ return []; }
+  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){ return []; }
 }
 function saveHistory(){
-  try{
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0,HISTORY_MAX)));
-  }catch(e){
-    state.history = state.history.slice(0, Math.max(0, state.history.length-4));
-    try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history)); }catch(e2){}
-  }
+  try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0,HISTORY_MAX))); }catch(e){}
 }
 function makeThumbnail(sourceCanvas, maxW){
   try{
@@ -1536,179 +1160,51 @@ function makeThumbnail(sourceCanvas, maxW){
   }catch(e){ return null; }
 }
 function addToHistory(dataUrl){
-  state.history.unshift({id:'h'+Date.now()+Math.floor(Math.random()*1000), dataUrl, time:Date.now()});
-  if(state.history.length>HISTORY_MAX) state.history.length=HISTORY_MAX;
-  saveHistory();
-  renderHistoryAll();
+  state.history.unshift({id:'h'+Date.now(), dataUrl, time:Date.now()});
+  saveHistory(); renderHistoryAll();
 }
-function removeFromHistory(id){
-  state.history=state.history.filter(x=>x.id!==id);
-  saveHistory();
-  renderHistoryAll();
-}
-function downloadHistoryItem(item){
-  const a=document.createElement('a'); a.href=item.dataUrl; a.download='petal-booth-'+item.id+'.jpg'; a.click();
-}
-function renderHistoryAll(){
-  renderHistoryScatter();
-  renderHistoryFull();
-}
-function renderHistoryScatter(){
-  const leftEl=document.getElementById('historyScatterLeft');
-  const rightEl=document.getElementById('historyScatterRight');
-  if(!leftEl||!rightEl) return;
-  leftEl.innerHTML=''; rightEl.innerHTML='';
-  const items = state.history.slice(0, 10);
-  items.forEach((item, i)=>{
-    let side = item.side === 'left' || item.side === 'right' ? item.side : (i%2===0 ? 'left':'right');
-    const container = side==='left' ? leftEl : rightEl;
-    const div=document.createElement('div'); div.className='history-item'; div.dataset.id=item.id;
-
-    if(typeof item.x === 'number' && typeof item.y === 'number'){
-      div.style.left = item.x+'px';
-      div.style.top = item.y+'px';
-      div.style.transform = 'none';
-    } else {
-      const sideIndex = Math.floor(i/2);
-      const topPct = 4 + sideIndex*21 + (i%3)*3;
-      const edgePx = 14 + ((i*29)%34);
-      const rotate = (((i*53)%17)-8);
-      div.style.top = Math.min(topPct,86)+'%';
-      div.style.left = edgePx+'px';
-      div.style.transform = `rotate(${rotate}deg)`;
-    }
-
-    const img=document.createElement('img'); img.src=item.dataUrl; img.draggable=false; img.title='Ketuk untuk unduh, tahan & geser untuk memindah';
-    const del=document.createElement('button'); del.className='hist-del'; del.textContent='✕'; del.title='Hapus dari riwayat';
-    del.onclick=(ev)=>{ ev.stopPropagation(); removeFromHistory(item.id); };
-    div.appendChild(img); div.appendChild(del);
-    container.appendChild(div);
-
-    makeHistoryItemDraggable(div, item, container);
-  });
-}
-function makeHistoryItemDraggable(el, item, container){
-  el.addEventListener('pointerdown', (ev)=>{
-    if(ev.target.classList.contains('hist-del')) return;
-    ev.preventDefault();
-    const containerRect = container.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-    const offsetX = ev.clientX - elRect.left;
-    const offsetY = ev.clientY - elRect.top;
-    let moved=false;
-    el.classList.add('dragging');
-    el.style.transform='none';
-    try{ el.setPointerCapture(ev.pointerId); }catch(e){}
-
-    function onMove(mv){
-      moved=true;
-      let x = mv.clientX - containerRect.left - offsetX;
-      let y = mv.clientY - containerRect.top - offsetY;
-      x = Math.max(0, Math.min(x, containerRect.width - elRect.width));
-      y = Math.max(0, Math.min(y, containerRect.height - elRect.height));
-      el.style.left = x+'px';
-      el.style.top = y+'px';
-    }
-    function onUp(){
-      el.classList.remove('dragging');
-      el.removeEventListener('pointermove', onMove);
-      el.removeEventListener('pointerup', onUp);
-      el.removeEventListener('pointercancel', onUp);
-      if(moved){
-        item.x = parseFloat(el.style.left);
-        item.y = parseFloat(el.style.top);
-        item.side = container.id==='historyScatterLeft' ? 'left' : 'right';
-        saveHistory();
-      } else {
-        downloadHistoryItem(item);
-      }
-    }
-    el.addEventListener('pointermove', onMove);
-    el.addEventListener('pointerup', onUp);
-    el.addEventListener('pointercancel', onUp);
-  });
-}
+function renderHistoryAll(){ renderHistoryFull(); }
 function renderHistoryFull(){
-  const wrap=document.getElementById('historyListFull');
-  if(!wrap) return;
+  const wrap=document.getElementById('historyListFull'); if(!wrap) return;
   wrap.innerHTML='';
-  if(state.history.length===0){
-    wrap.innerHTML='<div class="history-empty">Belum ada foto tersimpan ✿</div>';
-    return;
-  }
   state.history.forEach((item, idx)=>{
     const row=document.createElement('div'); row.className='history-row';
-    const img=document.createElement('img'); img.src=item.dataUrl;
-    const meta=document.createElement('div'); meta.className='meta';
-    const d=new Date(item.time||parseInt(String(item.id).replace(/\D/g,'').slice(0,13))||Date.now());
-    const dateStr=d.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
-    const timeStr=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
-    meta.innerHTML=`<b>Sesi Foto #${state.history.length-idx}</b><span>${dateStr} · ${timeStr}</span>`;
-    const actions=document.createElement('div'); actions.className='row-actions';
-    const dl=document.createElement('button'); dl.textContent='⬇'; dl.title='Unduh';
-    dl.onclick=()=>downloadHistoryItem(item);
-    const del=document.createElement('button'); del.className='del'; del.textContent='✕'; del.title='Hapus';
-    del.onclick=()=>removeFromHistory(item);
-    actions.appendChild(dl); actions.appendChild(del);
-    row.appendChild(img); row.appendChild(meta); row.appendChild(actions);
+    row.innerHTML=`<img src="${item.dataUrl}"><div class="meta"><b>Sesi #${state.history.length-idx}</b></div>`;
     wrap.appendChild(row);
   });
 }
+
 document.getElementById('historyNavBtn').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
-document.getElementById('historyFab').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
 document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-start'); };
 
-/* AUTO-DETECT QUERY PARAM */
-(function initFromQuery(){
-  const params=new URLSearchParams(location.search);
-  const receiveId=params.get('receive');
-  const cameraId=params.get('camera');
-  if(receiveId){
-    setMinimalMode(true);
-    showScreen('screen-receive');
-    connectToHost(receiveId,'receiveStatus','receiveResult');
-    return;
-  }
-  if(cameraId){
-    setupBeCamera(cameraId);
-    return;
-  }
-})();
-
-/* init */
-loadStoredFrames();
-highlightOpt('optBuiltin');
-updateMirrorUI();
+/* INIT FIREBASE & ROLE */
+updateRoleUI();
 state.history = loadHistory();
-renderHistoryAll();
 </script>
-  <!-- Firebase App, Firestore, & Storage SDK -->
+
+<!-- FIREBASE INTEGRATION MODULE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+  import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // 1. Salin konfigurasi dari Langkah 1 ke sini:
- const firebaseConfig = {
-  apiKey: "AIzaSyDdzUi9J2Js-z_HV8F7ZUhdavDFVY_bSmE",
-  authDomain: "photobooth-5e183.firebaseapp.com",
-  projectId: "photobooth-5e183",
-  storageBucket: "photobooth-5e183.firebasestorage.app",
-  messagingSenderId: "1019097637387",
-  appId: "1:1019097637387:web:9358bbf539add509455d0e",
-  measurementId: "G-HCX9P41EFT"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyDdzUi9J2Js-z_HV8F7ZUhdavDFVY_bSmE",
+    authDomain: "photobooth-5e183.firebaseapp.com",
+    projectId: "photobooth-5e183",
+    storageBucket: "photobooth-5e183.firebasestorage.app",
+    messagingSenderId: "1019097637387",
+    appId: "1:1019097637387:web:9358bbf539add509455d0e",
+    measurementId: "G-HCX9P41EFT"
+  };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const storage = getStorage(app);
 
-  // Jadikan variabel Firebase bisa diakses global oleh script Petal Booth
   window.fbDb = db;
-  window.fbStorage = storage;
-  window.fbFirestoreTools = { collection, addDoc, onSnapshot, deleteDoc, doc };
-  window.fbStorageTools = { ref, uploadString, getDownloadURL, deleteObject };
+  window.fbFirestoreTools = { collection, addDoc, onSnapshot, deleteDoc, doc, setDoc };
+
+  // Load awal
+  loadStoredFrames();
 </script>
 </body>
 </html>
