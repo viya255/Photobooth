@@ -99,28 +99,8 @@
   details.help ol{margin:8px 0 2px; padding-left:18px; line-height:1.7;}
   .overlay{position:fixed; inset:0; background:rgba(91,75,102,0.55); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; z-index:50; padding:20px;}
   .overlay.show{display:flex;}
-  /* PERBAIKAN POP-UP REVIEW FOTO */
-.review-card {
-  background: white;
-  border-radius: 24px;
-  padding: 20px;
-  max-width: 420px;
-  width: 100%;
-  max-height: 85vh; /* Agar tidak melimpah keluar layar */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-shadow: var(--shadow);
-  text-align: center;
-}
-
-.review-card img {
-  width: 100%;
-  max-height: 55vh; /* Batasi tinggi foto agar tombol di bawahnya tidak terdorong keluar */
-  object-fit: contain;
-  border-radius: 16px;
-  margin-bottom: 16px;
-}
+  .review-card{background:white; border-radius:24px; padding:20px; max-width:420px; width:100%; box-shadow:var(--shadow); text-align:center;}
+  .review-card img{width:100%; border-radius:16px; margin-bottom:16px;}
   
   .frame-gallery{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; margin-top:8px;}
   .frame-thumb{border-radius:16px; overflow:hidden; cursor:pointer; border:3px solid transparent; position:relative; aspect-ratio:2/5; display:flex; align-items:center; justify-content:center; font-size:11px; text-align:center; padding:6px; background-position:center; background-size:cover;}
@@ -1053,7 +1033,7 @@ document.getElementById('manageFramesBtn').onclick=()=>{ buildManageFrameGallery
 document.getElementById('liveMonitorBtn').onclick = () => { 
   runAutoCleanup();
   listenToActiveSessions(); 
-  showScreen('screen-admin-monitor'); // <--- Menambahkan navigasi ke layar monitor admin
+  showScreen('screen-admin-monitor');
 };
 document.getElementById('backFromManageBtn').onclick=()=>{ showScreen('screen-start'); };
 document.getElementById('backFromMonitorBtn').onclick=()=>{ showScreen('screen-start'); };
@@ -1445,8 +1425,9 @@ document.getElementById('downloadBtn').onclick=()=>{
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
   const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
 };
-  // Fitur Cetak Foto (Print)
-  document.getElementById('printBtn').onclick = () => {
+
+// Fitur Cetak Foto (Print)
+document.getElementById('printBtn').onclick = () => {
   const canvas = document.getElementById('finalCanvas');
   const printImg = document.getElementById('printImg');
   
@@ -1461,138 +1442,103 @@ document.getElementById('downloadBtn').onclick=()=>{
   }, 250);
 };
 
-/* --- PERBAIKAN FUNGSI KIRIM KE HP --- */
-
-// 1. Upload ke Firebase diselesaikan TERLEBIH DAHULU sebelum QR dibuat
-/* PERBAIKAN: Kompres foto sebelum di-upload agar tidak mentok batas 1MB Firestore */
-async function pushFinalImageToShare() {
-  if (!window.fbDb || !state.sessionId) return false;
-
-  const sourceCanvas = document.getElementById('finalCanvas');
-  
-  // 1. Buat canvas mini khusus pengiriman HP (agar file kecil & cepat ter-upload)
-  const tempCanvas = document.createElement('canvas');
-  const targetW = 600; 
-  const targetH = Math.round((sourceCanvas.height * targetW) / sourceCanvas.width);
-  tempCanvas.width = targetW;
-  tempCanvas.height = targetH;
-
-  const ctx = tempCanvas.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(sourceCanvas, 0, 0, targetW, targetH);
-
-  // 2. Ubah ke JPEG kualitas 0.80 (Ukuran file ~200KB - jauh di bawah limit 1MB Firestore)
-  const compressedDataUrl = tempCanvas.toDataURL('image/jpeg', 0.80);
-
-  try {
+/* KIRIM KE HP & AMBIL KODE MANUAL (via koleksi terpisah shared_results) */
+async function pushFinalImageToShare(){
+  if(!window.fbDb || !state.sessionId) return false;
+  const canvas = document.getElementById('finalCanvas');
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  try{
     const { doc, setDoc } = window.fbFirestoreTools;
     await setDoc(doc(window.fbDb, "shared_results", state.sessionId), {
       code: state.sessionId,
-      image: compressedDataUrl,
+      image: dataUrl,
       createdAt: Date.now()
     });
     return true;
-  } catch (err) {
-    console.error('Gagal menyimpan hasil foto ke Firebase:', err);
+  }catch(err){
+    console.error('Gagal menyiapkan hasil untuk dikirim:', err);
     return false;
   }
 }
 
-// 2. Tampilkan Loading dulu, SETELAH upload sukses baru tampilkan QR
-// 1. Perbaikan fungsi penyiapan pengiriman QR
-async function showSendCodeBox(){
+function showSendCodeBox(){
   const codeBox = document.getElementById('codeBox');
   const qrWrap = document.getElementById('qrWrap');
   const codeBoxText = document.getElementById('codeBoxText');
   const retryRow = document.getElementById('sendRetryRow');
-  
   codeBox.style.display = 'block';
   qrWrap.style.display = 'none';
   retryRow.style.display = 'none';
-  
-  // Pastikan layar otomatis scroll ke kotak QR agar kelihatan oleh pengguna
-  codeBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  codeBoxText.textContent = 'Menyiapkan hasil untuk dikirim…';
 
-  // Cek apakah database Firebase sudah siap
-  if (!window.fbDb) {
-    codeBoxText.innerHTML = '⚠️ <b>Koneksi database belum siap.</b> Tunggu beberapa detik lalu klik "Coba Lagi".';
-    retryRow.style.display = 'flex';
-    return;
-  }
-
-  codeBoxText.innerHTML = '⏳ <b>Menyiapkan foto & membuat kode QR…</b>';
-
-  // Upload gambar ke Firebase
-  const ok = await pushFinalImageToShare();
-
-  if(!ok){
-    codeBoxText.innerHTML = '❌ <b>Gagal mengunggah foto.</b> Cek koneksi internet kamu.';
-    retryRow.style.display = 'flex';
-    return;
-  }
-
-  // Jika sukses upload, buat dan tampilkan QR Code
-  const url = location.origin + location.pathname + '?send=' + state.sessionId;
-  document.getElementById('qrImg').src = qrImageUrl(url, 180);
-  qrWrap.style.display = 'inline-block';
-  codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b style="font-size:16px;">' + state.sessionId + '</b>';
+  pushFinalImageToShare().then((ok)=>{
+    if(!ok){
+      codeBoxText.textContent = 'Gagal menyiapkan pengiriman. Coba lagi.';
+      retryRow.style.display = 'flex';
+      return;
+    }
+    const url = location.origin + location.pathname + '?send=' + state.sessionId;
+    document.getElementById('qrImg').src = qrImageUrl(url, 180);
+    qrWrap.style.display = 'inline-block';
+    codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
+  });
 }
 
-// 2. Hubungkan tombol Kirim ke HP & Tombol Coba Lagi
 document.getElementById('sendPhoneBtn').onclick = () => { showSendCodeBox(); };
 document.getElementById('sendRetryBtn').onclick = () => { showSendCodeBox(); };
 
-// 3. Perbaikan Pencarian Data di HP Penerima (Toleran terhadap delay jaringan)
-function fetchSharedResult(code, onFound, onNotFound){
-  if(!window.fbDb || !code){ onNotFound(); return; }
-  const { doc, onSnapshot, getDoc } = window.fbFirestoreTools;
-  let settled = false;
+function renderReceivedImage(container, dataUrl){
+  container.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  img.style.cssText = 'width:100%; max-width:280px; border-radius:16px; box-shadow:var(--shadow); margin-bottom:14px;';
+  container.appendChild(img);
 
-  const cleanCode = code.trim();
-  const docRef = doc(window.fbDb, "shared_results", cleanCode);
-
-  // 1. Coba ambil langsung (One-time fetch) untuk respon cepat
-  getDoc(docRef).then((docSnap) => {
-    if(!settled && docSnap.exists() && docSnap.data().image){
-      settled = true;
-      clearTimeout(timeoutTimer);
-      onFound(docSnap.data().image);
-    }
-  }).catch(err => console.error("Direct fetch error:", err));
-
-  // 2. Pasang Listener Realtime jika fetch pertama butuh waktu
-  const unsub = onSnapshot(docRef, (docSnap) => {
-    if(!settled && docSnap.exists() && docSnap.data().image){
-      settled = true;
-      clearTimeout(timeoutTimer);
-      unsub();
-      onFound(docSnap.data().image);
-    }
-  }, (err) => {
-    console.error('Firestore Read Error:', err);
-  });
-
-  // Beri waktu tunggu hingga 25 detik sebelum menyerah
-  const timeoutTimer = setTimeout(() => {
-    if(!settled){
-      settled = true;
-      if(unsub) unsub();
-      onNotFound();
-    }
-  }, 25000);
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'btn btn-primary';
+  dlBtn.textContent = '⬇ Simpan ke HP';
+  dlBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.download = 'petal-booth-' + Date.now() + '.jpg';
+    a.href = dataUrl;
+    a.click();
+  };
+  container.appendChild(dlBtn);
 }
 
-  const unsub = onSnapshot(doc(window.fbDb, "shared_results", code.trim()), (docSnap) => {
-    if(docSnap.exists() && docSnap.data().image){
-      settled = true;
-      clearTimeout(timeoutTimer);
-      unsub();
-      onFound(docSnap.data().image);
+/* PERBAIKAN UTAMA: Menunggu Modul Firebase Siap Terlebih Dahulu Sebelum Mengambil Foto */
+function fetchSharedResult(code, onFound, onNotFound){
+  if(!code){ onNotFound(); return; }
+
+  let attempts = 0;
+  const startListening = () => {
+    if(!window.fbDb || !window.fbFirestoreTools){
+      attempts++;
+      if(attempts > 50){ // Tunggu hingga 10 detik jika modul Firebase lambat termuat
+        onNotFound();
+        return;
+      }
+      setTimeout(startListening, 200);
+      return;
     }
-  }, (err) => {
-    console.error('Gagal membaca data dari Firebase:', err);
-  });
+
+    const { doc, onSnapshot } = window.fbFirestoreTools;
+    let settled = false;
+    const unsub = onSnapshot(doc(window.fbDb, "shared_results", code.trim()), (docSnap)=>{
+      if(docSnap.exists() && docSnap.data().image){
+        settled = true;
+        unsub();
+        onFound(docSnap.data().image);
+      }
+    }, (err)=>{
+      console.error('Gagal membaca shared_results:', err && err.code, err);
+      if(!settled) onNotFound();
+    });
+
+    setTimeout(()=>{ if(!settled){ unsub(); onNotFound(); } }, 15000);
+  };
+
+  startListening();
 }
 
 function startReceiveFlow(code){
