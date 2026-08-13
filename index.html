@@ -1276,8 +1276,24 @@ function renderFinalCanvas(){
         const renderW = item.w * item.scale * scaleFactor;
         const renderH = item.h * item.scale * scaleFactor;
 
-        ctx.drawImage(im, renderX, renderY, renderW, renderH);
+        // Hitung otomatis agar gambar memotong tengah (crop cover) & tidak penyet
+const imgAspect = im.width / im.height;
+const targetAspect = renderW / renderH;
+let sx, sy, sWidth, sHeight;
 
+if (imgAspect > targetAspect) {
+  sHeight = im.height;
+  sWidth = im.height * targetAspect;
+  sx = (im.width - sWidth) / 2;
+  sy = 0;
+} else {
+  sWidth = im.width;
+  sHeight = im.width / targetAspect;
+  sx = 0;
+  sy = (im.height - sHeight) / 2;
+}
+
+ctx.drawImage(im, sx, sy, sWidth, sHeight, renderX, renderY, renderW, renderH);
         loaded++;
         if(loaded === total){
           if(!f.builtin && f.dataUrl){
@@ -1310,7 +1326,7 @@ function finishCanvasFooter(ctx,W,H,f){
 
 function safeDataUrl(){
   const canvas=document.getElementById('finalCanvas');
-  try{ return canvas.toDataURL('image/png'); }
+  try{ return canvas.toDataURL('image/jpeg', 0.85); }
   catch(e){ alert('Gagal memproses gambar. Coba pakai Kamera Perangkat.'); return null; }
 }
 
