@@ -297,7 +297,7 @@
   </div>
 </div>
 
-<!-- LIVE MONITORING SCREEN (KHUSUS ADMIN - TAMPILAN LIVE STREAMING REAL-TIME) -->
+<!-- LIVE MONITORING SCREEN (KHUSUS ADMIN) -->
 <div class="screen" id="screen-admin-monitor">
   <div class="card">
     <h2 style="margin-bottom:6px;">📡 Live Monitor Sesi Customer</h2>
@@ -478,6 +478,27 @@ function qrImageUrl(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
+// HELPER KOMPRESI GAMBAR AGAR TIDAK LEBIH DARI LIMIT FIRESTORE (1MB)
+function compressBase64(dataUrl, maxSide = 400, quality = 0.5) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > h) {
+        if (w > maxSide) { h = Math.round((h * maxSide) / w); w = maxSide; }
+      } else {
+        if (h > maxSide) { w = Math.round((w * maxSide) / h); h = maxSide; }
+      }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
 const state = {
   sessionId: null,
   camSource:'builtin', stream:null, photos:[], maxPhotos: 3,
@@ -493,25 +514,29 @@ const state = {
   camPeer:null, camCall:null,
   finalReady:false,
   history:[],
-  manageFilterSlots: 3
+  manageFilterSlots: 3,
+  adminUnsubscribeLive: null
 };
 
-/* SINKRONISASI REAL-TIME KE FIREBASE (LIVESTREAM STATUS & FOTO) */
+/* SINKRONISASI CEPAT & RINGAN KE FIREBASE */
 async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId) return;
   try {
     const { doc, setDoc } = window.fbFirestoreTools;
-    const canvas = document.getElementById('finalCanvas');
-    const liveCanvasPreview = (statusName.includes('Frame') || statusName.includes('Edit')) ? safeDataUrl() : null;
+
+    // Kompresi semua foto mentah sebelum dikirim agar tidak overlimit & tanpa delay
+    const compressedPhotos = await Promise.all(state.photos.map(p => compressBase64(p, 300, 0.5)));
 
     await setDoc(doc(window.fbDb, "active_sessions", state.sessionId), {
       sessionId: state.sessionId,
       status: statusName,
       photoCount: state.photos.length,
       maxPhotos: state.maxPhotos,
-      photos: state.photos,
+      photos: compressedPhotos,
       selectedFrameId: state.selectedFrame ? state.selectedFrame.id : null,
-      livePreview: liveCanvasPreview,
+      placedPhotosState: placedPhotos.map(p => ({
+        id: p.id, photoIdx: p.photoIdx, x: p.x, y: p.y, w: p.w, h: p.h, scale: p.scale
+      })),
       updatedAt: Date.now()
     }, { merge: true });
   } catch(err) {
@@ -519,7 +544,7 @@ async function pushRealtimeSessionState(statusName) {
   }
 }
 
-/* LISTEN MONITORING LIVE DENGAN RENDER REAL-TIME */
+/* MONITOR DASHBOARD LIST SESI REAL-TIME */
 function listenToActiveSessions() {
   if (!window.fbDb) return;
   const { collection, onSnapshot } = window.fbFirestoreTools;
@@ -541,7 +566,6 @@ function listenToActiveSessions() {
 
       const timeAgo = Math.max(0, Math.round((Date.now() - (data.updatedAt || Date.now())) / 1000));
       
-      // GRID FOTO REAL-TIME AKTIVITAS CUSTOMER
       let photoGridHTML = '';
       if (data.photos && data.photos.length > 0) {
         photoGridHTML = `<div style="display:flex; gap:8px; margin-top:8px; overflow-x:auto;">`;
@@ -559,38 +583,61 @@ function listenToActiveSessions() {
             <div style="font-size:15px; font-weight:700;">Sesi: ${data.sessionId}</div>
             <div style="font-size:12px; color:var(--plum-soft);">${data.photoCount || 0}/${data.maxPhotos || 3} foto terfoto · ${timeAgo} dtk lalu</div>
           </div>
-          <button class="btn btn-ghost edit-session-btn" style="padding: 8px 16px; font-size: 13px;">✏️ Buka Editor Admin</button>
+          <button class="btn btn-ghost edit-session-btn" style="padding: 8px 16px; font-size: 13px;">👁️ Tonton / Edit Live</button>
         </div>
         ${photoGridHTML}
-        ${data.livePreview ? `<div style="margin-top:10px; text-align:center;"><div style="font-size:11px; font-weight:700; margin-bottom:4px; color:var(--pink-deep);">🔴 LIVE PREVIEW CANVAS CUSTOMER:</div><img src="${data.livePreview}" style="max-width:140px; border-radius:12px; border:4px solid white; box-shadow:var(--shadow);"></div>` : ''}
       `;
 
       card.querySelector('.edit-session-btn').onclick = () => {
-        if (!data.photos || data.photos.length === 0) {
-          alert('Customer belum selesai mengambil foto.');
-          return;
-        }
-
-        state.sessionId = data.sessionId;
-        state.maxPhotos = data.maxPhotos || data.photos.length;
-        state.photos = data.photos;
-
-        showScreen('screen-final');
-        state.finalReady = false;
-        setupEditorWorkspace();
-        
-        renderFinalCanvas().then(() => {
-          state.finalReady = true;
-          document.getElementById('downloadBtn').disabled = false;
-          document.getElementById('printBtn').disabled = false;
-          document.getElementById('sendPhoneBtn').disabled = false;
-        });
+        openAdminLiveEditor(data.sessionId);
       };
 
       monitorList.appendChild(card);
     });
   }, (err) => {
     console.error("Firestore Listen Error:", err);
+  });
+}
+
+/* FUNGSI BUKA LIVE EDITOR ADMIN TANPA DELAY */
+function openAdminLiveEditor(targetSessionId) {
+  if (!window.fbDb) return;
+  const { doc, onSnapshot } = window.fbFirestoreTools;
+
+  state.sessionId = targetSessionId;
+  showScreen('screen-final');
+
+  if (state.adminUnsubscribeLive) state.adminUnsubscribeLive();
+
+  // Listen perubahan dari customer secara langsung
+  state.adminUnsubscribeLive = onSnapshot(doc(window.fbDb, "active_sessions", targetSessionId), (docSnap) => {
+    if (!docSnap.exists()) return;
+    const data = docSnap.data();
+
+    state.maxPhotos = data.maxPhotos || 3;
+    state.photos = data.photos || [];
+    
+    if (data.selectedFrameId) {
+      const foundFrame = state.frames.find(f => f.id === data.selectedFrameId);
+      if (foundFrame) state.selectedFrame = foundFrame;
+    }
+
+    if (data.placedPhotosState && data.placedPhotosState.length > 0) {
+      placedPhotos = data.placedPhotosState.map((p, idx) => ({
+        ...p,
+        src: state.photos[p.photoIdx] || state.photos[idx] || ''
+      }));
+    } else {
+      setupEditorWorkspace();
+    }
+
+    renderFreeEditor();
+    renderFinalCanvas().then(() => {
+      state.finalReady = true;
+      document.getElementById('downloadBtn').disabled = false;
+      document.getElementById('printBtn').disabled = false;
+      document.getElementById('sendPhoneBtn').disabled = false;
+    });
   });
 }
 
@@ -626,6 +673,7 @@ function fullCleanup(){
   stopCamera();
   if(state.camPeer){ state.camPeer.destroy(); state.camPeer=null; }
   if(state.hostPeer){ state.hostPeer.destroy(); state.hostPeer=null; state.hostPeerId=null; }
+  if(state.adminUnsubscribeLive){ state.adminUnsubscribeLive(); state.adminUnsubscribeLive = null; }
 }
 document.getElementById('homeBtn').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
 document.getElementById('brandClick').onclick = ()=>{ setMinimalMode(false); fullCleanup(); showScreen('screen-start'); };
@@ -781,7 +829,7 @@ function takePhoto(w, h) {
   if (state.mirror) { ctx.translate(w, 0); ctx.scale(-1, 1); }
   ctx.drawImage(videoEl, 0, 0, w, h);
   
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
   state.pendingShot = dataUrl;
 
   const flash = document.getElementById('camFlash');
@@ -992,7 +1040,7 @@ function buildEditorFrameSelector(){
       state.selectedFrame = f;
       buildEditorFrameSelector();
       renderFreeEditor();
-      pushRealtimeSessionState('Mengedit (Frame: ' + f.name + ')');
+      pushRealtimeSessionState('Ganti Frame: ' + f.name);
     };
     wrap.appendChild(card);
   });
@@ -1106,7 +1154,7 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
     const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
     if(thumb) addToHistory(thumb);
 
-    pushRealtimeSessionState('Mengedit Canvas');
+    pushRealtimeSessionState('Editor / Selesai');
   }catch(e){
     alert('Gagal menyiapkan hasil akhir: '+e.message);
   }
