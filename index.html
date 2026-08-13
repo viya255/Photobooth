@@ -954,33 +954,18 @@ document.getElementById('frameUpload').onchange = (e) => {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = async () => {
-    try {
-      const base64Data = reader.result;
-      const frameId = 'custom-' + Date.now();
-      const storageRef = window.fbStorageTools.ref(window.fbStorage, `frames/${frameId}.png`);
+  reader.onload = () => {
+    const newFrame = {
+      id: 'custom-' + Date.now(),
+      slots: state.manageFilterSlots,
+      name: `Custom (${state.manageFilterSlots} Shot)`,
+      dataUrl: reader.result,
+      builtin: false
+    };
 
-      // 1. Upload file gambar ke Firebase Storage
-      await window.fbStorageTools.uploadString(storageRef, base64Data, 'data_url');
-      const downloadURL = await window.fbStorageTools.getDownloadURL(storageRef);
-
-      // 2. Simpan data frame ke Firestore Database
-      await window.fbFirestoreTools.addDoc(
-        window.fbFirestoreTools.collection(window.fbDb, "custom_frames"),
-        {
-          slots: state.manageFilterSlots,
-          name: `Custom (${state.manageFilterSlots} Shot)`,
-          dataUrl: downloadURL,
-          storagePath: `frames/${frameId}.png`,
-          builtin: false,
-          createdAt: Date.now()
-        }
-      );
-
-      alert('Frame berhasil di-upload ke Cloud! Semua device sekarang bisa memakainya. ✿');
-    } catch (err) {
-      alert('Gagal mengunggah frame ke Firebase: ' + err.message);
-    }
+    state.frames.push(newFrame);
+    buildManageFrameGallery();
+    alert('Frame berhasil ditambahkan! ✿');
   };
   reader.readAsDataURL(file);
   e.target.value = '';
