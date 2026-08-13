@@ -183,7 +183,7 @@
       top:0; 
       left:0; 
       width: 2in; 
-      height: 6in;
+      height: 5in;
     }
     #printArea img{
       width: 100%; 
@@ -527,6 +527,7 @@ function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
 
 const state = {
   sessionId: null,
+  isOwnerDevice: false,
   camSource:'builtin', stream:null, photos:[], maxPhotos: 3,
   mirror:true,
   frames:[
@@ -582,7 +583,10 @@ function listenCurrentSessionLive() {
 
     state.isUpdatingFromLive = true;
 
-    if (data.photos && data.photos.length > 0) {
+    // Perangkat pemilik sesi (yang memotret) TETAP pakai foto asli resolusi tinggi di memori lokal.
+    // Snapshot dari Firestore hanya versi terkompresi (untuk sync/monitoring), jadi jangan menimpa
+    // foto asli di perangkat pemilik -- ini mencegah hasil unduh/cetak jadi buram.
+    if (data.photos && data.photos.length > 0 && !state.isOwnerDevice) {
       state.photos = data.photos;
     }
 
@@ -693,8 +697,42 @@ function listenToActiveSessions() {
   });
 }
 
+/* AUTO-CLEAN: hapus otomatis data lama supaya tidak numpuk terus.
+   Sesi/foto yang baru selesai TETAP bisa dibuka & dipantau admin selama
+   CLEANUP_RETENTION_HOURS jam ke depan -- baru dihapus permanen setelahnya.
+   Ubah angka ini kalau mau retensinya lebih lama/pendek. */
+const CLEANUP_RETENTION_HOURS = 24;
+let lastAutoCleanAt = 0;
+
+async function runAutoCleanup(retentionHours = CLEANUP_RETENTION_HOURS){
+  if (!window.fbDb) return;
+  // Jangan jalankan lebih dari sekali per 10 menit per tab, biar hemat baca/tulis Firestore.
+  if (Date.now() - lastAutoCleanAt < 10 * 60 * 1000) return;
+  lastAutoCleanAt = Date.now();
+
+  try{
+    const { collection, getDocs, query, where, deleteDoc, doc } = window.fbFirestoreTools;
+    const cutoff = Date.now() - retentionHours * 60 * 60 * 1000;
+
+    const sessionsSnap = await getDocs(query(collection(window.fbDb, "active_sessions"), where("updatedAt", "<", cutoff)));
+    const sharedSnap = await getDocs(query(collection(window.fbDb, "shared_results"), where("createdAt", "<", cutoff)));
+
+    const deletions = [];
+    sessionsSnap.forEach(d => deletions.push(deleteDoc(doc(window.fbDb, "active_sessions", d.id))));
+    sharedSnap.forEach(d => deletions.push(deleteDoc(doc(window.fbDb, "shared_results", d.id))));
+
+    if (deletions.length > 0) {
+      await Promise.all(deletions);
+      console.log('Auto-clean: menghapus ' + deletions.length + ' data lama (>' + retentionHours + ' jam).');
+    }
+  }catch(err){
+    console.error('Auto-clean gagal:', err);
+  }
+}
+
 function openAdminLiveEditor(targetSessionId) {
   state.sessionId = targetSessionId;
+  state.isOwnerDevice = false;
   showScreen('screen-final');
   listenCurrentSessionLive();
 }
@@ -753,6 +791,7 @@ document.querySelectorAll('.photo-count-btn').forEach(btn => {
 });
 document.getElementById('startBtn').onclick=()=>{
   state.sessionId = 'SESI-' + Math.floor(1000 + Math.random() * 9000);
+  state.isOwnerDevice = true;
   state.photos=[]; document.getElementById('shotsRow').innerHTML='';
   showScreen('screen-capture');
   switchSource(chosenSource==='phone' ? 'phone' : 'builtin');
@@ -833,6 +872,9 @@ function startPhoneCameraPairing(){
     document.getElementById('camQrImg').src = qrImageUrl(url, 180);
     pairStatus.textContent = 'Scan QR ini pakai kamera HP yang ingin dijadikan kamera.';
   });
+  peer.on('error', (err)=>{
+    pairStatus.textContent = 'Gagal menyiapkan koneksi kamera HP: ' + err.type + '. Coba ulangi.';
+  });
   peer.on('call', (call)=>{
     call.answer();
     state.camCall = call;
@@ -842,6 +884,10 @@ function startPhoneCameraPairing(){
       setCamStatus('Kamera HP tersambung! Ketuk tombol jepret ✿');
       document.getElementById('shutterBtn').disabled=false;
       updateMirrorUI();
+    });
+    call.on('close', ()=>{
+      setCamStatus('Koneksi kamera HP terputus.', true);
+      document.getElementById('shutterBtn').disabled=true;
     });
   });
 }
@@ -985,6 +1031,7 @@ document.querySelectorAll('.manage-filter-btn').forEach(btn => {
 
 document.getElementById('manageFramesBtn').onclick=()=>{ buildManageFrameGallery(); showScreen('screen-manage-frames'); };
 document.getElementById('liveMonitorBtn').onclick = () => { 
+  runAutoCleanup();
   listenToActiveSessions(); 
   showScreen('screen-admin-monitor'); // <--- Menambahkan navigasi ke layar monitor admin
 };
@@ -1393,6 +1440,118 @@ document.getElementById('downloadBtn').onclick=()=>{
     window.print();
   }, 250);
 };
+
+/* KIRIM KE HP & AMBIL KODE MANUAL (via koleksi terpisah shared_results) */
+async function pushFinalImageToShare(){
+  if(!window.fbDb || !state.sessionId) return false;
+  const canvas = document.getElementById('finalCanvas');
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  try{
+    const { doc, setDoc } = window.fbFirestoreTools;
+    await setDoc(doc(window.fbDb, "shared_results", state.sessionId), {
+      code: state.sessionId,
+      image: dataUrl,
+      createdAt: Date.now()
+    });
+    return true;
+  }catch(err){
+    console.error('Gagal menyiapkan hasil untuk dikirim:', err);
+    return false;
+  }
+}
+
+function showSendCodeBox(){
+  const codeBox = document.getElementById('codeBox');
+  const qrWrap = document.getElementById('qrWrap');
+  const codeBoxText = document.getElementById('codeBoxText');
+  const retryRow = document.getElementById('sendRetryRow');
+  codeBox.style.display = 'block';
+  qrWrap.style.display = 'none';
+  retryRow.style.display = 'none';
+  codeBoxText.textContent = 'Menyiapkan hasil untuk dikirim…';
+
+  pushFinalImageToShare().then((ok)=>{
+    if(!ok){
+      codeBoxText.textContent = 'Gagal menyiapkan pengiriman. Coba lagi.';
+      retryRow.style.display = 'flex';
+      return;
+    }
+    const url = location.origin + location.pathname + '?send=' + state.sessionId;
+    document.getElementById('qrImg').src = qrImageUrl(url, 180);
+    qrWrap.style.display = 'inline-block';
+    codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
+  });
+}
+
+document.getElementById('sendPhoneBtn').onclick = () => { showSendCodeBox(); };
+document.getElementById('sendRetryBtn').onclick = () => { showSendCodeBox(); };
+
+function renderReceivedImage(container, dataUrl){
+  container.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  img.style.cssText = 'width:100%; max-width:280px; border-radius:16px; box-shadow:var(--shadow); margin-bottom:14px;';
+  container.appendChild(img);
+
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'btn btn-primary';
+  dlBtn.textContent = '⬇ Simpan ke HP';
+  dlBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.download = 'petal-booth-' + Date.now() + '.jpg';
+    a.href = dataUrl;
+    a.click();
+  };
+  container.appendChild(dlBtn);
+}
+
+function fetchSharedResult(code, onFound, onNotFound){
+  if(!window.fbDb || !code){ onNotFound(); return; }
+  const { doc, onSnapshot } = window.fbFirestoreTools;
+  let settled = false;
+  const unsub = onSnapshot(doc(window.fbDb, "shared_results", code.trim()), (docSnap)=>{
+    if(docSnap.exists() && docSnap.data().image){
+      settled = true;
+      unsub();
+      onFound(docSnap.data().image);
+    }
+  }, ()=>{ if(!settled) onNotFound(); });
+
+  setTimeout(()=>{ if(!settled){ unsub(); onNotFound(); } }, 8000);
+}
+
+function startReceiveFlow(code){
+  const statusEl = document.getElementById('receiveStatus');
+  const resultEl = document.getElementById('receiveResult');
+  statusEl.textContent = 'Mengambil fotomu…';
+  fetchSharedResult(code,
+    (dataUrl)=>{
+      statusEl.textContent = 'Ketemu! Ini hasil fotomu ✿';
+      renderReceivedImage(resultEl, dataUrl);
+    },
+    ()=>{
+      statusEl.textContent = 'Kode tidak ditemukan atau sudah kedaluwarsa. Minta admin kirim ulang ya.';
+    }
+  );
+}
+
+document.getElementById('retrieveGoBtn').onclick = () => {
+  const code = document.getElementById('retrieveCodeInput').value;
+  const statusEl = document.getElementById('retrieveStatus');
+  const resultEl = document.getElementById('retrieveResult');
+  if(!code.trim()){ statusEl.textContent = 'Masukkan kode dulu ya.'; return; }
+  statusEl.textContent = 'Mencari…';
+  resultEl.innerHTML = '';
+  fetchSharedResult(code,
+    (dataUrl)=>{
+      statusEl.textContent = '';
+      renderReceivedImage(resultEl, dataUrl);
+    },
+    ()=>{ statusEl.textContent = 'Kode tidak ditemukan atau sudah kedaluwarsa.'; }
+  );
+};
+document.getElementById('backToFinalBtn').onclick = () => { showScreen('screen-final'); };
+
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.selectedFrame=null; placedPhotos = [];
   pushRealtimeSessionState('Sesi Selesai');
@@ -1432,13 +1591,83 @@ function renderHistoryFull(){
 document.getElementById('historyNavBtn').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
 document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-start'); };
 
+/* MODE "JADI KAMERA HP" via ?camera=ID & MODE TERIMA VIA QR via ?send=CODE */
+let cameraModeHostId = null;
+let cameraModeState = { peer: null, stream: null, call: null };
+
+document.getElementById('beCameraStartBtn').onclick = async () => {
+  const statusEl = document.getElementById('beCameraStatus');
+  const btn = document.getElementById('beCameraStartBtn');
+  btn.disabled = true;
+  statusEl.textContent = 'Menyalakan kamera HP…';
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    cameraModeState.stream = stream;
+    document.getElementById('selfPreview').srcObject = stream;
+
+    const peer = new Peer();
+    cameraModeState.peer = peer;
+
+    peer.on('open', () => {
+      statusEl.textContent = 'Menyambung ke layar utama…';
+      const call = peer.call(cameraModeHostId, stream);
+      cameraModeState.call = call;
+      if(!call){
+        statusEl.textContent = 'Gagal menyambung. Kembali & scan ulang QR di layar utama.';
+        btn.disabled = false;
+        return;
+      }
+      call.on('error', ()=>{
+        statusEl.textContent = 'Koneksi ke layar utama gagal. Scan ulang QR-nya.';
+        btn.disabled = false;
+      });
+      call.on('close', ()=>{
+        statusEl.textContent = 'Koneksi ke layar utama terputus.';
+        btn.disabled = false;
+      });
+      statusEl.textContent = 'Tersambung! Foto akan diambil dari layar utama ✿';
+    });
+    peer.on('error', (err) => {
+      statusEl.textContent = 'Koneksi gagal: ' + err.type + '. Coba muat ulang halaman ini.';
+      btn.disabled = false;
+    });
+  }catch(err){
+    statusEl.textContent = 'Tidak bisa mengakses kamera HP. Pastikan izin kamera diizinkan di browser.';
+    btn.disabled = false;
+  }
+};
+
+function handleUrlParams(){
+  const params = new URLSearchParams(location.search);
+  const cameraHostId = params.get('camera');
+  const sendCode = params.get('send');
+
+  if(cameraHostId){
+    cameraModeHostId = cameraHostId;
+    setMinimalMode(true);
+    showScreen('screen-be-camera');
+    return;
+  }
+  if(sendCode){
+    setMinimalMode(true);
+    showScreen('screen-receive');
+    startReceiveFlow(sendCode);
+    return;
+  }
+}
+
 updateRoleUI();
 state.history = loadHistory();
+handleUrlParams();
+setTimeout(() => { runAutoCleanup(); }, 3000);
 </script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDdzUi9J2Js-z_HV8F7ZUhdavDFVY_bSmE",
@@ -1454,7 +1683,7 @@ state.history = loadHistory();
   const db = getFirestore(app);
 
   window.fbDb = db;
-  window.fbFirestoreTools = { collection, addDoc, onSnapshot, deleteDoc, doc, setDoc };
+  window.fbFirestoreTools = { collection, addDoc, onSnapshot, deleteDoc, doc, setDoc, getDocs, query, where };
 
   loadStoredFrames();
 </script>
