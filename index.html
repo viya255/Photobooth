@@ -174,24 +174,10 @@
 
   #printArea{display:none;}
   @media print{
-    @page { margin: 0; size: auto; }
     body *{visibility:hidden;}
     #printArea, #printArea *{visibility:visible;}
-    #printArea{
-      display:block !important; 
-      position:fixed; 
-      top:0; 
-      left:0; 
-      width: 2in; 
-      height: 6in;
-    }
-    #printArea img{
-      width: 100%; 
-      height: 100%; 
-      object-fit: contain;
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: crisp-edges;
-    }
+    #printArea{display:block !important; position:fixed; top:0; left:0; width:2in;}
+    #printArea img{width:2in;}
   }
 </style>
 </head>
@@ -371,7 +357,7 @@
 
       <div class="zoom-controls">
         <span style="font-size:12px; font-weight:700; color:var(--plum);">🔍 Zoom Foto Terpilih:</span>
-        <button class="zoom-btn" id="zoomOutBtn" type="button" title="Perbesar Foto">-</button>
+        <button class="zoom-btn" id="zoomOutBtn" type="button" title="Perkecil Foto">-</button>
         <button class="zoom-btn" id="zoomInBtn" type="button" title="Perbesar Foto">+</button>
         <button class="btn btn-ghost" id="resetZoomBtn" type="button" style="padding: 4px 10px; font-size: 11px;">Reset</button>
       </div>
@@ -503,6 +489,7 @@ function qrImageUrl(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
+/* PERBAIKAN BURAQ/PECAH: Naikkan resolusi maksimal & kualitas kompresi untuk database */
 function compressBase64(dataUrl, maxSide = 1200, quality = 0.85) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -545,6 +532,7 @@ const state = {
   isUpdatingFromLive: false
 };
 
+/* SINKRONISASI 2 ARAH (REAL-TIME STREAMING) */
 async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId || state.isUpdatingFromLive) return;
   try {
@@ -568,6 +556,7 @@ async function pushRealtimeSessionState(statusName) {
   }
 }
 
+/* KONEKSIKAN DUA-ARAH UNTUK CUSTOMER MAUPUN ADMIN */
 function listenCurrentSessionLive() {
   if (!window.fbDb || !state.sessionId) return;
   const { doc, onSnapshot } = window.fbFirestoreTools;
@@ -579,10 +568,6 @@ function listenCurrentSessionLive() {
     const data = docSnap.data();
 
     state.isUpdatingFromLive = true;
-
-    if (data.maxPhotos) {
-      state.maxPhotos = data.maxPhotos;
-    }
 
     if (data.photos && data.photos.length > 0) {
       state.photos = data.photos;
@@ -758,7 +743,6 @@ document.getElementById('startBtn').onclick=()=>{
   state.photos=[]; document.getElementById('shotsRow').innerHTML='';
   showScreen('screen-capture');
   switchSource(chosenSource==='phone' ? 'phone' : 'builtin');
-  renderShotsRow();
   pushRealtimeSessionState('Mulai Foto');
 };
 
@@ -882,6 +866,7 @@ document.getElementById('shutterBtn').onclick = () => {
   }, 1000);
 };
 
+/* PERBAIKAN: Jepret Foto dengan Kualitas Maksimal (0.98 JPEG) */
 function takePhoto(w, h) {
   const canvas = document.createElement('canvas'); 
   canvas.width = w; canvas.height = h;
@@ -904,8 +889,6 @@ function takePhoto(w, h) {
   document.getElementById('shutterBtn').disabled = false;
 }
 document.getElementById('retakeBtn').onclick=()=>{ document.getElementById('reviewOverlay').classList.remove('show'); state.pendingShot=null; };
-
-/* PERBAIKAN LOGIKA PINDAH HALAMAN 3 & 4 FOTO */
 document.getElementById('keepBtn').onclick=()=>{
   state.photos.push(state.pendingShot);
   renderShotsRow();
@@ -927,7 +910,6 @@ document.getElementById('keepBtn').onclick=()=>{
     setCamStatus((state.maxPhotos - state.photos.length)+' foto lagi ya!');
   }
 };
-
 function renderShotsRow(){
   const row=document.getElementById('shotsRow'); row.innerHTML='';
   for(let i=0; i<state.maxPhotos; i++){
@@ -1061,9 +1043,9 @@ function setupEditorWorkspace(){
 
   const previewW = 220;
   const photoW = 165;
-  const photoH = state.maxPhotos === 4 ? 95 : 120;
-  const startY = state.maxPhotos === 4 ? 30 : 40;
-  const gapY = state.maxPhotos === 4 ? 110 : 140;
+  const photoH = state.maxPhotos === 3 ? 120 : 95;
+  const startY = state.maxPhotos === 3 ? 40 : 30;
+  const gapY = state.maxPhotos === 3 ? 140 : 110;
 
   state.photos.forEach((photoSrc, idx) => {
     const defaultY = startY + idx * gapY;
@@ -1305,6 +1287,7 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   }
 };
 
+/* PERBAIKAN: Render Canvas HD + Smooth Antialiasing */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
     const canvas=document.getElementById('finalCanvas');
@@ -1369,6 +1352,7 @@ function renderFinalCanvas(){
   });
 }
 
+/* PERBAIKAN: Fungsi Unduh HD (Kualitas PNG 1.0) */
 function safeDataUrl(){
   const canvas=document.getElementById('finalCanvas');
   try{ return canvas.toDataURL('image/png', 1.0); } catch(e){ return null; }
@@ -1378,22 +1362,6 @@ document.getElementById('downloadBtn').onclick=()=>{
   const dataUrl=safeDataUrl(); if(!dataUrl) return;
   const a=document.createElement('a'); a.download='petal-booth-'+Date.now()+'.png'; a.href=dataUrl; a.click();
 };
-
-document.getElementById('printBtn').onclick = () => {
-  const canvas = document.getElementById('finalCanvas');
-  if (!canvas) return;
-  
-  const highResDataUrl = canvas.toDataURL('image/png', 1.0);
-  const printImg = document.getElementById('printImg');
-  
-  if (printImg) {
-    printImg.src = highResDataUrl;
-    setTimeout(() => {
-      window.print();
-    }, 300);
-  }
-};
-
 document.getElementById('newSessionBtn').onclick=()=>{
   state.photos=[]; state.selectedFrame=null; placedPhotos = [];
   pushRealtimeSessionState('Sesi Selesai');
