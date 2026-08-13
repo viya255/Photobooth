@@ -1515,9 +1515,15 @@ function fetchSharedResult(code, onFound, onNotFound){
       unsub();
       onFound(docSnap.data().image);
     }
-  }, ()=>{ if(!settled) onNotFound(); });
+  }, (err)=>{
+    // PENTING buat debugging: kalau di console browser muncul "permission-denied",
+    // artinya Firestore Security Rules belum mengizinkan READ pada koleksi shared_results
+    // (menulis/generate QR bisa saja tetap berhasil walau rules read-nya belum diizinkan).
+    console.error('Gagal membaca shared_results:', err && err.code, err);
+    if(!settled) onNotFound();
+  });
 
-  setTimeout(()=>{ if(!settled){ unsub(); onNotFound(); } }, 8000);
+  setTimeout(()=>{ if(!settled){ unsub(); onNotFound(); } }, 12000);
 }
 
 function startReceiveFlow(code){
