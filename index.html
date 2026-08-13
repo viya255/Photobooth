@@ -1441,11 +1441,16 @@ document.getElementById('downloadBtn').onclick=()=>{
   }, 250);
 };
 
-/* KIRIM KE HP & AMBIL KODE MANUAL (via koleksi terpisah shared_results) */
+/* --- PERBAIKAN FUNGSI KIRIM KE HP --- */
+
+// 1. Upload ke Firebase diselesaikan TERLEBIH DAHULU sebelum QR dibuat
 async function pushFinalImageToShare(){
   if(!window.fbDb || !state.sessionId) return false;
+  
   const canvas = document.getElementById('finalCanvas');
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  // Gunakan kompresi ringan agar upload sangat cepat (0.85)
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  
   try{
     const { doc, setDoc } = window.fbFirestoreTools;
     await setDoc(doc(window.fbDb, "shared_results", state.sessionId), {
@@ -1455,75 +1460,64 @@ async function pushFinalImageToShare(){
     });
     return true;
   }catch(err){
-    console.error('Gagal menyiapkan hasil untuk dikirim:', err);
+    console.error('Gagal menyimpan hasil foto ke Firebase:', err);
     return false;
   }
 }
 
-function showSendCodeBox(){
+// 2. Tampilkan Loading dulu, SETELAH upload sukses baru tampilkan QR
+async function showSendCodeBox(){
   const codeBox = document.getElementById('codeBox');
   const qrWrap = document.getElementById('qrWrap');
   const codeBoxText = document.getElementById('codeBoxText');
   const retryRow = document.getElementById('sendRetryRow');
+  
   codeBox.style.display = 'block';
-  qrWrap.style.display = 'none';
+  qrWrap.style.display = 'none'; // Sembunyikan QR dulu agar tidak di-scan sebelum data siap
   retryRow.style.display = 'none';
-  codeBoxText.textContent = 'Menyiapkan hasil untuk dikirim…';
+  codeBoxText.innerHTML = '⏳ <b>Menyiapkan foto & membuat kode QR…</b>';
 
-  pushFinalImageToShare().then((ok)=>{
-    if(!ok){
-      codeBoxText.textContent = 'Gagal menyiapkan pengiriman. Coba lagi.';
-      retryRow.style.display = 'flex';
-      return;
-    }
-    const url = location.origin + location.pathname + '?send=' + state.sessionId;
-    document.getElementById('qrImg').src = qrImageUrl(url, 180);
-    qrWrap.style.display = 'inline-block';
-    codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
-  });
+  // Tunggu upload selesai
+  const ok = await pushFinalImageToShare();
+
+  if(!ok){
+    codeBoxText.textContent = '❌ Gagal menyiapkan pengiriman (Cek koneksi internet).';
+    retryRow.style.display = 'flex';
+    return;
+  }
+
+  // Setelah sukses ter-upload ke Firestore, baru buat dan tampilkan QR Code!
+  const url = location.origin + location.pathname + '?send=' + state.sessionId;
+  document.getElementById('qrImg').src = qrImageUrl(url, 180);
+  qrWrap.style.display = 'inline-block';
+  codeBoxText.innerHTML = 'Scan QR di atas pakai HP, atau masukkan kode manual: <b>' + state.sessionId + '</b>';
 }
 
-document.getElementById('sendPhoneBtn').onclick = () => { showSendCodeBox(); };
-document.getElementById('sendRetryBtn').onclick = () => { showSendCodeBox(); };
-
-function renderReceivedImage(container, dataUrl){
-  container.innerHTML = '';
-  const img = document.createElement('img');
-  img.src = dataUrl;
-  img.style.cssText = 'width:100%; max-width:280px; border-radius:16px; box-shadow:var(--shadow); margin-bottom:14px;';
-  container.appendChild(img);
-
-  const dlBtn = document.createElement('button');
-  dlBtn.className = 'btn btn-primary';
-  dlBtn.textContent = '⬇ Simpan ke HP';
-  dlBtn.onclick = () => {
-    const a = document.createElement('a');
-    a.download = 'petal-booth-' + Date.now() + '.jpg';
-    a.href = dataUrl;
-    a.click();
-  };
-  container.appendChild(dlBtn);
-}
-
+// 3. Perbaikan Pencarian Data di HP Penerima (Toleran terhadap delay jaringan)
 function fetchSharedResult(code, onFound, onNotFound){
   if(!window.fbDb || !code){ onNotFound(); return; }
   const { doc, onSnapshot } = window.fbFirestoreTools;
   let settled = false;
-  const unsub = onSnapshot(doc(window.fbDb, "shared_results", code.trim()), (docSnap)=>{
+
+  // Berikan timeout yang cukup (20 detik) untuk menunggu sync Firestore jika koneksi lambat
+  const timeoutTimer = setTimeout(() => {
+    if(!settled){
+      settled = true;
+      if(unsub) unsub();
+      onNotFound();
+    }
+  }, 20000);
+
+  const unsub = onSnapshot(doc(window.fbDb, "shared_results", code.trim()), (docSnap) => {
     if(docSnap.exists() && docSnap.data().image){
       settled = true;
+      clearTimeout(timeoutTimer);
       unsub();
       onFound(docSnap.data().image);
     }
-  }, (err)=>{
-    // PENTING buat debugging: kalau di console browser muncul "permission-denied",
-    // artinya Firestore Security Rules belum mengizinkan READ pada koleksi shared_results
-    // (menulis/generate QR bisa saja tetap berhasil walau rules read-nya belum diizinkan).
-    console.error('Gagal membaca shared_results:', err && err.code, err);
-    if(!settled) onNotFound();
+  }, (err) => {
+    console.error('Gagal membaca data dari Firebase:', err);
   });
-
-  setTimeout(()=>{ if(!settled){ unsub(); onNotFound(); } }, 12000);
 }
 
 function startReceiveFlow(code){
