@@ -110,9 +110,8 @@
   .upload-frame-tile{border:2px dashed var(--pink-deep); border-radius:16px; aspect-ratio:2/5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--pink-deep); font-size:12px; font-weight:700; background:var(--pink);}
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   
-  .monitor-list{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:12px;}
-  .monitor-card{background:var(--cream); border-radius:16px; padding:14px; border:1px solid var(--pink-deep); display:flex; gap:12px; align-items:center; transition: transform .15s ease;}
-  .monitor-card:hover{transform: translateY(-2px);}
+  .monitor-list{display:flex; flex-direction:column; gap:16px; width:100%; margin-top:12px;}
+  .monitor-card{background:var(--cream); border-radius:20px; padding:18px; border:1px solid var(--pink-deep); display:flex; flex-direction:column; gap:12px;}
   .monitor-badge{background:var(--pink-deep); color:white; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; display:inline-block; margin-bottom:4px;}
 
   .editor-workspace { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; margin: 16px 0; }
@@ -298,11 +297,11 @@
   </div>
 </div>
 
-<!-- LIVE MONITORING SCREEN (KHUSUS ADMIN) -->
+<!-- LIVE MONITORING SCREEN (KHUSUS ADMIN - TAMPILAN LIVE STREAMING REAL-TIME) -->
 <div class="screen" id="screen-admin-monitor">
   <div class="card">
     <h2 style="margin-bottom:6px;">📡 Live Monitor Sesi Customer</h2>
-    <p class="lead">Pantau sesi foto pengguna secara real-time. Ketuk kartu sesi untuk membantu mengedit foto!</p>
+    <p class="lead">Memantau seluruh aktivitas customer secara real-time tanpa perlu refresh!</p>
     
     <div class="monitor-list" id="monitorList">
       <div style="text-align:center; color:var(--plum-soft); padding:20px;">Menghubungkan ke database live...</div>
@@ -497,17 +496,22 @@ const state = {
   manageFilterSlots: 3
 };
 
-/* SYNC FIREBASE TERMASUK FOTO MENTAH */
+/* SINKRONISASI REAL-TIME KE FIREBASE (LIVESTREAM STATUS & FOTO) */
 async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId) return;
   try {
     const { doc, setDoc } = window.fbFirestoreTools;
+    const canvas = document.getElementById('finalCanvas');
+    const liveCanvasPreview = (statusName.includes('Frame') || statusName.includes('Edit')) ? safeDataUrl() : null;
+
     await setDoc(doc(window.fbDb, "active_sessions", state.sessionId), {
       sessionId: state.sessionId,
       status: statusName,
       photoCount: state.photos.length,
       maxPhotos: state.maxPhotos,
-      photos: state.photos, // Menyimpan array foto mentah
+      photos: state.photos,
+      selectedFrameId: state.selectedFrame ? state.selectedFrame.id : null,
+      livePreview: liveCanvasPreview,
       updatedAt: Date.now()
     }, { merge: true });
   } catch(err) {
@@ -515,6 +519,7 @@ async function pushRealtimeSessionState(statusName) {
   }
 }
 
+/* LISTEN MONITORING LIVE DENGAN RENDER REAL-TIME */
 function listenToActiveSessions() {
   if (!window.fbDb) return;
   const { collection, onSnapshot } = window.fbFirestoreTools;
@@ -533,24 +538,36 @@ function listenToActiveSessions() {
       const data = docSnap.data();
       const card = document.createElement('div');
       card.className = 'monitor-card';
-      card.style.cursor = 'pointer';
 
       const timeAgo = Math.max(0, Math.round((Date.now() - (data.updatedAt || Date.now())) / 1000));
       
+      // GRID FOTO REAL-TIME AKTIVITAS CUSTOMER
+      let photoGridHTML = '';
+      if (data.photos && data.photos.length > 0) {
+        photoGridHTML = `<div style="display:flex; gap:8px; margin-top:8px; overflow-x:auto;">`;
+        data.photos.forEach(pUrl => {
+          photoGridHTML += `<img src="${pUrl}" style="width:60px; height:60px; object-fit:cover; border-radius:10px; border:2px solid var(--pink);">`;
+        });
+        photoGridHTML += `</div>`;
+      }
+
       card.innerHTML = `
-        <div style="width:50px; height:50px; background:var(--pink); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px;">📸</div>
-        <div style="flex:1;">
-          <span class="monitor-badge">${(data.status || 'Aktif').toUpperCase()}</span>
-          <div style="font-size:14px; font-weight:700; margin-top:2px;">Sesi: ${data.sessionId}</div>
-          <div style="font-size:12px; color:var(--plum-soft);">Progress: ${data.photoCount || 0}/${data.maxPhotos || 3} foto terfoto · ${timeAgo} dtk lalu</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:46px; height:46px; background:var(--pink); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px;">📸</div>
+          <div style="flex:1;">
+            <span class="monitor-badge">${(data.status || 'Aktif').toUpperCase()}</span>
+            <div style="font-size:15px; font-weight:700;">Sesi: ${data.sessionId}</div>
+            <div style="font-size:12px; color:var(--plum-soft);">${data.photoCount || 0}/${data.maxPhotos || 3} foto terfoto · ${timeAgo} dtk lalu</div>
+          </div>
+          <button class="btn btn-ghost edit-session-btn" style="padding: 8px 16px; font-size: 13px;">✏️ Buka Editor Admin</button>
         </div>
-        <button class="btn btn-ghost" style="padding: 6px 14px; font-size: 12px;">✏️ Bantu Edit</button>
+        ${photoGridHTML}
+        ${data.livePreview ? `<div style="margin-top:10px; text-align:center;"><div style="font-size:11px; font-weight:700; margin-bottom:4px; color:var(--pink-deep);">🔴 LIVE PREVIEW CANVAS CUSTOMER:</div><img src="${data.livePreview}" style="max-width:140px; border-radius:12px; border:4px solid white; box-shadow:var(--shadow);"></div>` : ''}
       `;
 
-      // KLIK KARTU KURSUS/ADMIN UNTUK MENGEDIT FOTO SESI TERSEBUT
-      card.onclick = () => {
+      card.querySelector('.edit-session-btn').onclick = () => {
         if (!data.photos || data.photos.length === 0) {
-          alert('Customer belum selesai mengambil foto pada sesi ini.');
+          alert('Customer belum selesai mengambil foto.');
           return;
         }
 
@@ -781,7 +798,7 @@ document.getElementById('keepBtn').onclick=()=>{
   document.getElementById('reviewOverlay').classList.remove('show');
   state.pendingShot=null;
 
-  pushRealtimeSessionState('Proses Foto');
+  pushRealtimeSessionState('Mengambil Foto (' + state.photos.length + '/' + state.maxPhotos + ')');
 
   if(state.photos.length >= state.maxPhotos){
     setCamStatus(state.maxPhotos + ' foto tersimpan! Menuju pilih frame ✿');
@@ -840,6 +857,7 @@ function buildFrameGallery(){
     el.onclick = () => { 
       state.selectedFrame = f; 
       buildFrameGallery(); 
+      pushRealtimeSessionState('Memilih Frame: ' + f.name);
     };
     gal.appendChild(el);
   });
@@ -921,7 +939,7 @@ document.getElementById('frameUpload').onchange = (e) => {
   e.target.value = '';
 };
 
-/* EDITOR OTOMATIS PLACEMENT */
+/* EDITOR OTOMATIS PLACEMENT & REALTIME PUSH */
 function setupEditorWorkspace(){
   placedPhotos = [];
   selectedPlacedPhotoId = null;
@@ -974,6 +992,7 @@ function buildEditorFrameSelector(){
       state.selectedFrame = f;
       buildEditorFrameSelector();
       renderFreeEditor();
+      pushRealtimeSessionState('Mengedit (Frame: ' + f.name + ')');
     };
     wrap.appendChild(card);
   });
@@ -1051,6 +1070,7 @@ function renderFreeEditor(){
         isDragging = false;
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
+        pushRealtimeSessionState('Mengatur Posisi Foto');
       };
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
@@ -1076,7 +1096,6 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
   state.finalReady=false;
   setupEditorWorkspace();
-  pushRealtimeSessionState('Editor / Selesai');
 
   try{
     await renderFinalCanvas();
@@ -1086,6 +1105,8 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
     document.getElementById('sendPhoneBtn').disabled=false;
     const thumb = makeThumbnail(document.getElementById('finalCanvas'), 240);
     if(thumb) addToHistory(thumb);
+
+    pushRealtimeSessionState('Mengedit Canvas');
   }catch(e){
     alert('Gagal menyiapkan hasil akhir: '+e.message);
   }
@@ -1137,7 +1158,7 @@ function renderFinalCanvas(){
 
 function safeDataUrl(){
   const canvas=document.getElementById('finalCanvas');
-  try{ return canvas.toDataURL('image/jpeg', 0.85); } catch(e){ return null; }
+  try{ return canvas.toDataURL('image/jpeg', 0.6); } catch(e){ return null; }
 }
 
 document.getElementById('downloadBtn').onclick=()=>{
