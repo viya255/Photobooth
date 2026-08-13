@@ -566,16 +566,24 @@ function listenCurrentSessionLive() {
 
     state.isUpdatingFromLive = true;
 
+    if (data.photos && data.photos.length > 0) {
+      state.photos = data.photos;
+    }
+
     if (data.selectedFrameId) {
       const foundFrame = state.frames.find(f => f.id === data.selectedFrameId);
       if (foundFrame) state.selectedFrame = foundFrame;
     }
 
     if (data.placedPhotosState && data.placedPhotosState.length > 0) {
-      placedPhotos = data.placedPhotosState.map((p, idx) => ({
-        ...p,
-        src: state.photos[p.photoIdx] || state.photos[idx] || p.src || ''
-      }));
+      placedPhotos = data.placedPhotosState.map((p, idx) => {
+        const photoIndex = p.photoIdx !== undefined ? p.photoIdx : idx;
+        return {
+          ...p,
+          photoIdx: photoIndex,
+          src: state.photos[photoIndex] || state.photos[idx] || ''
+        };
+      });
     }
 
     buildEditorFrameSelector();
@@ -1102,8 +1110,9 @@ function renderFreeEditor(){
     el.style.width = curW + 'px';
     el.style.height = curH + 'px';
 
+    const imgSrc = item.src || state.photos[item.photoIdx] || '';
     const img = document.createElement('img');
-    img.src = item.src;
+    img.src = imgSrc;
     el.appendChild(img);
 
     const delBtn = document.createElement('button');
@@ -1226,7 +1235,7 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
     if(thumb) addToHistory(thumb);
 
     pushRealtimeSessionState('Editor / Selesai');
-    listenCurrentSessionLive(); // Aktifkan pendengar live di device customer
+    listenCurrentSessionLive();
   }catch(e){
     alert('Gagal menyiapkan hasil akhir: '+e.message);
   }
@@ -1271,7 +1280,7 @@ function renderFinalCanvas(){
           } else { resolve(); }
         }
       };
-      im.src = item.src;
+      im.src = item.src || state.photos[item.photoIdx] || '';
     });
   });
 }
