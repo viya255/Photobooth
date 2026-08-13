@@ -36,7 +36,6 @@
     justify-content: center;
   }
 
-  /* Admin Badge */
   .mode-badge {
     background: var(--plum); color: white; padding: 4px 12px; border-radius: 99px;
     font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;
@@ -111,12 +110,10 @@
   .upload-frame-tile{border:2px dashed var(--pink-deep); border-radius:16px; aspect-ratio:2/5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; cursor:pointer; color:var(--pink-deep); font-size:12px; font-weight:700; background:var(--pink);}
   .frame-size-note{font-size:12px; color:var(--plum-soft); margin-top:10px; background:var(--mint); padding:10px 14px; border-radius:12px; width:100%;}
   
-  /* Live Monitor List */
   .monitor-list{display:flex; flex-direction:column; gap:12px; width:100%; margin-top:12px;}
   .monitor-card{background:var(--cream); border-radius:16px; padding:14px; border:1px solid var(--pink-deep); display:flex; gap:12px; align-items:center;}
   .monitor-badge{background:var(--pink-deep); color:white; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; display:inline-block; margin-bottom:4px;}
 
-  /* EDITOR AREA */
   .editor-workspace { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; margin: 16px 0; }
   .strip-preview { width: 220px; height: 550px; border-radius: 14px; position: relative; overflow: hidden; box-shadow: var(--shadow); background: #ffffff; flex-shrink: 0; touch-action: none; user-select: none; }
   .free-photo-layer { position: absolute; inset: 0; z-index: 1; touch-action: none; }
@@ -191,7 +188,6 @@
     <button class="link-btn" id="homeBtn">🏠 Beranda</button>
   </div>
   <div class="nav-right">
-    <!-- Indikator Mode Perangkat -->
     <span class="mode-badge booth" id="modeBadge">📱 Device Booth</span>
     <button class="link-btn" id="toggleRoleBtn">🔐 Ganti Mode (Admin/Booth)</button>
     
@@ -222,7 +218,6 @@
       </div>
     </div>
 
-    <!-- PILIHAN JUMLAH FOTO -->
     <div class="photo-count-selector" style="margin-top: 20px; text-align: center;">
       <label style="font-weight: 700; display: block; margin-bottom: 8px;">Target Jepretan Foto:</label>
       <div class="btn-row" style="margin-top: 0;">
@@ -231,7 +226,6 @@
       </div>
     </div>
 
-    <!-- Tombol Mulai Foto -->
     <div class="btn-row">
       <button class="btn btn-primary" id="startBtn">Mulai Foto →</button>
     </div>
@@ -310,7 +304,7 @@
     <p class="lead">Pantau sesi foto pengguna secara real-time dari perangkat ini.</p>
     
     <div class="monitor-list" id="monitorList">
-      <div style="text-align:center; color:var(--plum-soft); padding:20px;">Menunggu aktivitas dari perangkat booth customer...</div>
+      <div style="text-align:center; color:var(--plum-soft); padding:20px;">Menghubungkan ke database live...</div>
     </div>
 
     <div class="btn-row" style="margin-top:20px;">
@@ -347,19 +341,16 @@
   </div>
 </div>
 
-<!-- FINAL (EDITOR ATUR FOTO LANGSUNG) -->
+<!-- FINAL -->
 <div class="screen" id="screen-final">
   <div class="stepper"><div class="dot done">📷</div><div class="dot done">🖼️</div><div class="dot now">✓</div></div>
   <div class="card" style="text-align:center;">
     <h2>Selesai! Cantik sekali ✨</h2>
     <p class="lead">Geser tengah foto untuk memindahkan. Tarik titik merah muda ⤢ di ujung kanan bawah foto untuk memperbesar / memperkecil.</p>
 
-    <!-- Editor Workspace -->
     <div class="editor-workspace">
-      <!-- Canvas Frame Area -->
       <div class="strip-preview" id="stripPreviewFinal"></div>
 
-      <!-- Pemilih Mini Frame Langsung -->
       <div style="width:100%; max-width:380px; text-align:left;">
         <label style="font-size:12px; font-weight:700; color:var(--plum);">🖼️ Ganti Frame:</label>
         <div class="frame-mini-selector" id="editorFrameSelector"></div>
@@ -432,9 +423,8 @@
 const HISTORY_KEY = 'petalBoothHistory';
 const HISTORY_MAX = 20;
 
-/* ROLE MANAGEMENT (ADMIN vs BOOTH) */
-let currentRole = localStorage.getItem('petalBoothRole') || 'booth'; // default: booth
-const ADMIN_PIN = '1234'; // PIN bawaan admin (bisa kamu ganti)
+let currentRole = localStorage.getItem('petalBoothRole') || 'booth';
+const ADMIN_PIN = '1234';
 
 function updateRoleUI() {
   const badge = document.getElementById('modeBadge');
@@ -472,11 +462,8 @@ document.getElementById('toggleRoleBtn').onclick = () => {
 };
 
 function setMinimalMode(enable){
-  if(enable){
-    document.body.classList.add('minimal-mode');
-  } else {
-    document.body.classList.remove('minimal-mode');
-  }
+  if(enable){ document.body.classList.add('minimal-mode'); }
+  else { document.body.classList.remove('minimal-mode'); }
 }
 
 function qrImageUrl(data, size){
@@ -487,13 +474,10 @@ function qrImageUrl(data, size){
       qr.make();
       return qr.createDataURL(6, 12);
     }
-  } catch(e) {
-    console.warn('Local QRCode fallback:', e);
-  }
+  } catch(e) {}
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(data);
 }
 
-/* STATE UTAMA */
 const state = {
   sessionId: null,
   camSource:'builtin', stream:null, photos:[], maxPhotos: 3,
@@ -512,19 +496,21 @@ const state = {
   manageFilterSlots: 3
 };
 
-/* REALTIME SESSION SYNC (FIREBASE) */
-function pushRealtimeSessionState(statusName) {
+/* SYNC FIREBASE DENGAN DATA RINGAN (BEBAS LIMIT) */
+async function pushRealtimeSessionState(statusName) {
   if (!window.fbDb || !state.sessionId) return;
-  const { doc, setDoc } = window.fbFirestoreTools;
-
-  setDoc(doc(window.fbDb, "active_sessions", state.sessionId), {
-    sessionId: state.sessionId,
-    status: statusName,
-    photoCount: state.photos.length,
-    maxPhotos: state.maxPhotos,
-    updatedAt: Date.now(),
-    previewPhoto: state.photos[0] || null
-  }, { merge: true }).catch(err => console.error("Sync error:", err));
+  try {
+    const { doc, setDoc } = window.fbFirestoreTools;
+    await setDoc(doc(window.fbDb, "active_sessions", state.sessionId), {
+      sessionId: state.sessionId,
+      status: statusName,
+      photoCount: state.photos.length,
+      maxPhotos: state.maxPhotos,
+      updatedAt: Date.now()
+    }, { merge: true });
+  } catch(err) {
+    console.error("Gagal sync ke Firebase:", err);
+  }
 }
 
 function listenToActiveSessions() {
@@ -537,7 +523,7 @@ function listenToActiveSessions() {
     monitorList.innerHTML = '';
 
     if (snapshot.empty) {
-      monitorList.innerHTML = '<div style="text-align:center; color:var(--plum-soft); padding:20px;">Belum ada sesi aktif.</div>';
+      monitorList.innerHTML = '<div style="text-align:center; color:var(--plum-soft); padding:20px;">Belum ada sesi aktif dari customer.</div>';
       return;
     }
 
@@ -546,18 +532,20 @@ function listenToActiveSessions() {
       const card = document.createElement('div');
       card.className = 'monitor-card';
 
-      const timeAgo = Math.round((Date.now() - data.updatedAt) / 1000);
+      const timeAgo = Math.max(0, Math.round((Date.now() - (data.updatedAt || Date.now())) / 1000));
       
       card.innerHTML = `
-        ${data.previewPhoto ? `<img src="${data.previewPhoto}" style="width:60px; height:60px; object-fit:cover; border-radius:10px;">` : `<div style="width:60px; height:60px; background:var(--pink); border-radius:10px; display:flex; align-items:center; justify-content:center;">📷</div>`}
+        <div style="width:50px; height:50px; background:var(--pink); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px;">📸</div>
         <div style="flex:1;">
-          <span class="monitor-badge">${data.status.toUpperCase()}</span>
-          <div style="font-size:14px; font-weight:700;">Sesi ID: ${data.sessionId}</div>
-          <div style="font-size:12px; color:var(--plum-soft);">Progress: ${data.photoCount}/${data.maxPhotos} foto · ${timeAgo} dtk lalu</div>
+          <span class="monitor-badge">${(data.status || 'Aktif').toUpperCase()}</span>
+          <div style="font-size:14px; font-weight:700; margin-top:2px;">Sesi: ${data.sessionId}</div>
+          <div style="font-size:12px; color:var(--plum-soft);">Status: ${data.photoCount || 0}/${data.maxPhotos || 3} foto terfoto · ${timeAgo} dtk lalu</div>
         </div>
       `;
       monitorList.appendChild(card);
     });
+  }, (err) => {
+    console.error("Firestore Listen Error:", err);
   });
 }
 
@@ -577,12 +565,8 @@ function loadStoredFrames() {
     const screenFrame = document.getElementById('screen-frame');
     const screenManage = document.getElementById('screen-manage-frames');
     
-    if (screenFrame && screenFrame.classList.contains('active')) {
-      buildFrameGallery();
-    }
-    if (screenManage && screenManage.classList.contains('active')) {
-      buildManageFrameGallery();
-    }
+    if (screenFrame && screenFrame.classList.contains('active')) buildFrameGallery();
+    if (screenManage && screenManage.classList.contains('active')) buildManageFrameGallery();
   });
 }
 
@@ -621,7 +605,7 @@ document.getElementById('startBtn').onclick=()=>{
   state.photos=[]; document.getElementById('shotsRow').innerHTML='';
   showScreen('screen-capture');
   switchSource(chosenSource==='phone' ? 'phone' : 'builtin');
-  pushRealtimeSessionState('Memulai Foto');
+  pushRealtimeSessionState('Mulai Foto');
 };
 
 /* CAPTURE SCREEN */
@@ -670,17 +654,14 @@ async function startBuiltinCamera(){
   document.getElementById('shutterBtn').disabled=true;
   try{
     stopCamera();
-    const constraints = {
-      video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
-      audio: false
-    };
+    const constraints = { video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     state.stream=stream; videoEl.srcObject=stream;
     setCamStatus('Kamera HD siap! Ketuk tombol jepret ya ✿');
     document.getElementById('shutterBtn').disabled=false;
     updateMirrorUI();
   }catch(err){
-    setCamStatus('Tidak bisa mengakses kamera ('+err.name+'). Buka bantuan "Kamera tidak muncul?" di atas.', true);
+    setCamStatus('Tidak bisa mengakses kamera. Pastikan izin kamera aktif.', true);
   }
 }
 function stopCamera(){
@@ -772,7 +753,7 @@ document.getElementById('keepBtn').onclick=()=>{
   document.getElementById('reviewOverlay').classList.remove('show');
   state.pendingShot=null;
 
-  pushRealtimeSessionState('Sedang Memotret');
+  pushRealtimeSessionState('Proses Foto');
 
   if(state.photos.length >= state.maxPhotos){
     setCamStatus(state.maxPhotos + ' foto tersimpan! Menuju pilih frame ✿');
@@ -905,14 +886,14 @@ document.getElementById('frameUpload').onchange = (e) => {
     if (window.fbDb) {
       const { collection, addDoc } = window.fbFirestoreTools;
       await addDoc(collection(window.fbDb, "custom_frames"), frameData);
-      alert('Frame berhasil tersimpan di Cloud & tersinkronkan ke perangkat booth! ✿');
+      alert('Frame berhasil tersimpan! ✿');
     }
   };
   reader.readAsDataURL(file);
   e.target.value = '';
 };
 
-/* EDITOR OTOMATIS PLACEMENT & GESER / RESIZE UJUNG LANGSUNG */
+/* EDITOR OTOMATIS PLACEMENT */
 function setupEditorWorkspace(){
   placedPhotos = [];
   selectedPlacedPhotoId = null;
@@ -1018,7 +999,6 @@ function renderFreeEditor(){
     resizeHandle.textContent = '⤢';
     el.appendChild(resizeHandle);
 
-    /* LOGIKA DRAG & RESIZE */
     let isDragging = false, startX = 0, startY = 0;
     const onPointerDown = (e) => {
       if(e.target.classList.contains('photo-del-btn') || e.target.classList.contains('photo-resize-handle')) return;
@@ -1068,7 +1048,7 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   showScreen('screen-final');
   state.finalReady=false;
   setupEditorWorkspace();
-  pushRealtimeSessionState('Mengedit / Selesai');
+  pushRealtimeSessionState('Editor / Selesai');
 
   try{
     await renderFinalCanvas();
@@ -1083,7 +1063,6 @@ document.getElementById('toFinalBtn').onclick = async ()=>{
   }
 };
 
-/* RENDERING FINAL CANVAS */
 function renderFinalCanvas(){
   return new Promise((resolve, reject)=>{
     const canvas=document.getElementById('finalCanvas');
@@ -1143,7 +1122,6 @@ document.getElementById('newSessionBtn').onclick=()=>{
   showScreen('screen-start');
 };
 
-/* RIWAYAT & THUMBNAIL */
 function loadHistory(){
   try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){ return []; }
 }
@@ -1177,12 +1155,10 @@ function renderHistoryFull(){
 document.getElementById('historyNavBtn').onclick=()=>{ renderHistoryFull(); showScreen('screen-history'); };
 document.getElementById('backFromHistoryBtn').onclick=()=>{ showScreen('screen-start'); };
 
-/* INIT FIREBASE & ROLE */
 updateRoleUI();
 state.history = loadHistory();
 </script>
 
-<!-- FIREBASE INTEGRATION MODULE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -1203,7 +1179,6 @@ state.history = loadHistory();
   window.fbDb = db;
   window.fbFirestoreTools = { collection, addDoc, onSnapshot, deleteDoc, doc, setDoc };
 
-  // Load awal
   loadStoredFrames();
 </script>
 </body>
